@@ -1,0 +1,1 @@
+<template><section class="error-page"><div class="error-code">403</div><p class="eyebrow">ACCESS CONTROL</p><h1>当前角色没有访问权限</h1><p>请返回你的工作台，或联系项目管理员调整项目角色。</p><RouterLink class="primary-button" to="/dashboard">返回工作台</RouterLink></section></template>

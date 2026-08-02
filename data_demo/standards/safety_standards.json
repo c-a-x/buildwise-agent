@@ -1,0 +1,22 @@
+[
+  {"id":"STD-HELMET-001","title":"进入施工现场佩戴安全帽","category":"个人防护","hazard_types":["no_helmet"],"source":"项目安全生产管理制度","article":"第12条","content":"进入施工现场的人员应正确佩戴安全帽，并扣紧下颌带。","keywords":["安全帽","个人防护","施工现场"]},
+  {"id":"STD-HELMET-002","title":"安全帽使用前检查","category":"个人防护","hazard_types":["no_helmet"],"source":"项目安全生产管理制度","article":"第13条","content":"安全帽使用前应检查帽壳、帽衬和下颌带，发现损伤应立即更换。","keywords":["安全帽","检查","下颌带"]},
+  {"id":"STD-GUARDRAIL-001","title":"临边防护栏杆","category":"临边防护","hazard_types":["missing_guardrail"],"source":"建筑施工高处作业安全技术规范","article":"第4.3.1条","content":"临边作业面应设置连续、稳固的防护栏杆和挡脚板。","keywords":["临边","防护栏杆","高处作业"]},
+  {"id":"STD-GUARDRAIL-002","title":"洞口防护","category":"洞口防护","hazard_types":["missing_guardrail"],"source":"建筑施工高处作业安全技术规范","article":"第4.2.1条","content":"水平洞口应设置牢固的盖板、防护栏杆或安全网。","keywords":["洞口","盖板","安全网"]},
+  {"id":"STD-VEST-001","title":"交叉作业穿反光背心","category":"个人防护","hazard_types":["no_safety_vest"],"source":"施工现场安全防护管理细则","article":"第8条","content":"进入交叉作业区域的人员应穿着符合要求的反光安全背心。","keywords":["反光背心","安全背心","个人防护"]},
+  {"id":"STD-ELECTRIC-001","title":"临时用电配电箱","category":"临时用电","hazard_types":["electrical_risk"],"source":"施工现场临时用电安全技术规范","article":"第8.1条","content":"配电箱应设置防雨设施和明显的安全警示标志。","keywords":["配电箱","临时用电","防雨"]},
+  {"id":"STD-ELECTRIC-002","title":"漏电保护器","category":"临时用电","hazard_types":["electrical_risk"],"source":"施工现场临时用电安全技术规范","article":"第8.2条","content":"用电设备必须配置与负荷匹配的漏电保护器。","keywords":["漏电保护","用电设备","安全"]},
+  {"id":"STD-SCAFFOLD-001","title":"脚手架基础","category":"脚手架","hazard_types":["scaffold_risk"],"source":"建筑施工扣件式钢管脚手架安全技术规范","article":"第6.2条","content":"脚手架基础应平整坚实，并采取排水措施。","keywords":["脚手架","基础","排水"]},
+  {"id":"STD-SCAFFOLD-002","title":"脚手架连墙件","category":"脚手架","hazard_types":["scaffold_risk"],"source":"建筑施工扣件式钢管脚手架安全技术规范","article":"第6.4条","content":"脚手架应按方案设置连墙件，严禁随意拆除。","keywords":["脚手架","连墙件","施工方案"]},
+  {"id":"STD-LIFT-001","title":"起重吊装指挥","category":"起重吊装","hazard_types":["lifting_risk"],"source":"建筑施工起重吊装工程安全技术规范","article":"第5.1条","content":"起重吊装作业应由专人指挥，信号清晰统一。","keywords":["起重","吊装","指挥"]},
+  {"id":"STD-LIFT-002","title":"吊装区域隔离","category":"起重吊装","hazard_types":["lifting_risk"],"source":"建筑施工起重吊装工程安全技术规范","article":"第5.3条","content":"吊装作业影响区域应设置警戒线，禁止无关人员进入。","keywords":["吊装","警戒线","隔离"]},
+  {"id":"STD-HOT-001","title":"动火作业审批","category":"消防动火","hazard_types":["hot_work"],"source":"施工现场消防安全技术规范","article":"第6.1条","content":"动火作业应履行审批手续，作业现场配置灭火器材。","keywords":["动火","审批","灭火器"]},
+  {"id":"STD-HOT-002","title":"动火监护","category":"消防动火","hazard_types":["hot_work"],"source":"施工现场消防安全技术规范","article":"第6.4条","content":"动火作业时应安排专人监护，作业结束后检查确认无火灾隐患。","keywords":["动火","监护","消防"]},
+  {"id":"STD-EXCAVATION-001","title":"基坑临边防护","category":"基坑工程","hazard_types":["excavation_risk"],"source":"建筑基坑支护技术规程","article":"第7.2条","content":"基坑周边应设置防护栏杆和安全警示标志。","keywords":["基坑","临边","警示标志"]},
+  {"id":"STD-EXCAVATION-002","title":"基坑排水","category":"基坑工程","hazard_types":["excavation_risk"],"source":"建筑基坑支护技术规程","article":"第8.1条","content":"基坑施工应持续关注地下水和雨水，保持排水系统有效。","keywords":["基坑","排水","地下水"]},
+  {"id":"STD-HEIGHT-001","title":"高处作业安全带","category":"高处作业","hazard_types":["fall_risk"],"source":"建筑施工高处作业安全技术规范","article":"第5.2条","content":"高处作业人员应正确使用安全带，安全带应高挂低用。","keywords":["高处作业","安全带","防坠落"]},
+  {"id":"STD-HEIGHT-002","title":"高处作业平台","category":"高处作业","hazard_types":["fall_risk"],"source":"建筑施工高处作业安全技术规范","article":"第5.5条","content":"作业平台应满铺脚手板并固定牢靠，不得有探头板。","keywords":["作业平台","脚手板","高处"]},
+  {"id":"STD-TRAFFIC-001","title":"施工现场车辆限速","category":"现场交通","hazard_types":["traffic_risk"],"source":"施工现场安全管理制度","article":"第21条","content":"施工现场车辆应按规定路线行驶并控制车速。","keywords":["车辆","限速","现场交通"]},
+  {"id":"STD-TRAFFIC-002","title":"人车分流","category":"现场交通","hazard_types":["traffic_risk"],"source":"施工现场安全管理制度","article":"第22条","content":"施工现场应合理设置人车分流路线，交叉区域安排专人指挥。","keywords":["人车分流","车辆","指挥"]},
+  {"id":"STD-EMERGENCY-001","title":"应急通道保持畅通","category":"应急管理","hazard_types":["emergency_risk"],"source":"施工现场安全管理制度","article":"第28条","content":"施工现场安全出口、疏散通道和消防通道应保持畅通。","keywords":["应急通道","疏散","消防"]}
+]

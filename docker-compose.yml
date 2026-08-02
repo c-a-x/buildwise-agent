@@ -1,0 +1,27 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DATABASE_URL: sqlite:///./storage/buildwise.db
+      UPLOAD_DIR: storage/uploads
+      ANNOTATED_DIR: storage/annotated
+      REPORTS_DIR: storage/reports
+      KNOWLEDGE_JSON_PATH: data_demo/standards/safety_standards.json
+      CORS_ORIGINS: http://localhost:8080
+    ports:
+      - "8000:8000"
+    volumes:
+      - buildwise-storage:/app/storage
+
+  frontend:
+    build:
+      context: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  buildwise-storage:

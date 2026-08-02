@@ -1,0 +1,1 @@
+<template><section class="error-page"><div class="error-code">404</div><p class="eyebrow">PAGE NOT FOUND</p><h1>这条路径还没有页面</h1><p>链接可能已过期，或者页面正在规划中。</p><RouterLink class="primary-button" to="/dashboard">回到项目工作台</RouterLink></section></template>

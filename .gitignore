@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+backend/.venv/
+backend/venv/
+
+# Runtime data
+backend/storage/*
+!backend/storage/.gitkeep
+backend/storage/uploads/*
+!backend/storage/uploads/.gitkeep
+backend/storage/reports/*
+!backend/storage/reports/.gitkeep
+backend/storage/logs/*
+!backend/storage/logs/.gitkeep
+backend/*.db
+*.sqlite3
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+npm-debug.log*
+
+# Local environment
+.env
+*.local
+.DS_Store
+Thumbs.db
+

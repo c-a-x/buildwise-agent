@@ -148,11 +148,40 @@ TEXT_PROVIDER=template
 默认模式不读取外部密钥，响应中的 `is_simulated` 会明确为 `true`。真实 Provider 需要人工准备并验证：
 
 - `VISION_PROVIDER=ultralytics`：设置 `VISION_MODEL_PATH`，并安装/许可对应 YOLO 模型依赖；
+- `VISION_PROVIDER=safety_hybrid`：十类安全目标混合检测（YOLO + 可选 LLM 隐患分析），详见下节「十类视觉检测」；
 - `RETRIEVAL_PROVIDER=chroma`：使用 `CHROMA_DIR` 下的真实持久化 Chroma collection；先按下方命令导入已授权条款；
 - `TEXT_PROVIDER=openai_compatible`：同时设置 `LLM_BASE_URL`、`LLM_API_KEY`、`LLM_MODEL`；
 - 未配置必需参数时接口返回明确的 `PROVIDER_NOT_CONFIGURED`，不会静默退回模拟结果。
 
 不要把真实 API Key 写入仓库、镜像或文档。真实模型的许可、网络、成本和生产密钥由部署方负责。
+
+## 十类视觉检测（safety_hybrid）
+
+视觉识别可切换为 `safety_hybrid` 混合 Provider：YOLO 目标检测识别 10 类施工安全目标，可选叠加 LLM 隐患分析。
+
+- **10 类**：Hardhat / Mask / NO-Hardhat / NO-Mask / NO-Safety Vest / Person / Safety Cone / Safety Vest / machinery / vehicle；
+- **违规映射**：NO-Hardhat → 未佩戴安全帽（高危）、NO-Mask → 未佩戴口罩（中危）、NO-Safety Vest → 未穿反光安全背心（中危），均会生成整改工单草稿；已合规佩戴（Hardhat/Mask/Safety Vest/Safety Cone）不生成隐患；
+- **模型**：`backend/storage/models/yolov8n-10cls.pt`（在 [Construction Site Safety Image Dataset](https://www.kaggle.com/datasets/snehilsanyal/construction-site-safety-image-dataset-roboflow) 上训练的 10 类 YOLOv8n）。模型为运行时数据（已被 `.gitignore` 排除），需按下方说明放置；
+- **检测图**：前端在浏览器内基于检测框坐标叠加绘制，切换「原图 / 检测图」即可查看，后端无需额外标注文件。
+
+配置（`backend/.env`）：
+
+```env
+VISION_PROVIDER=safety_hybrid
+YOLO_MODEL_PATH=storage/models/yolov8n-10cls.pt
+YOLO_CONF_THRESHOLD=0.5
+
+# LLM 隐患分析（可选；不配置或调用失败时自动降级为纯 YOLO）
+VISION_LLM_PROVIDER=off          # claude_cli | doubao | off
+# VISION_LLM_PROVIDER=doubao 时同时设置：
+# LLM_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
+# LLM_API_KEY=你的key
+# LLM_MODEL=doubao-seed-2-0-mini-260215
+```
+
+**降级规则**：YOLO 模型缺失、加载失败或未安装 `backend[vision]` 依赖时，自动降级为模拟结果并显式标记 `is_simulated=true`，不会中断请求；`VISION_LLM_PROVIDER=off` 或 LLM 调用失败时仅保留 YOLO 检测（`is_simulated=false`，仍为真实检测）。
+
+**模型放置**：模型文件是运行期数据、不入 Git。可从数据集训练产物中复制 `results_yolov8n_100e/kaggle/working/runs/detect/train/weights/best.pt` 到 `backend/storage/models/yolov8n-10cls.pt`，或用 ultralytics 在同一 10 类数据集上自行训练并替换。
 
 ## Chroma 规范知识库
 
@@ -195,8 +224,8 @@ $env:RETRIEVAL_PROVIDER = "local_keyword"
 完整步骤见 [`docs/demo-script.md`](docs/demo-script.md)：
 
 1. 使用 `safety / BuildWise123!` 登录；
-2. 打开“安全分析”，选择演示项目和 `no_helmet` 场景，上传 `data_demo/images/safety_no_helmet.jpg`；
-3. 查看隐患、置信度、检测框、规范证据、五 Agent trace 和工单草稿；
+2. 打开”安全分析”，点击任一内置示例图（或上传现场照片）；
+3. 点击”开始安全分析”，在结果区切换「原图 / 检测图」查看检测框，并查看隐患、置信度、规范证据、五 Agent trace 和工单草稿；
 4. 点击“确认创建正式工单”；
 5. 在工单详情依次推进到“整改中”“待复查”，填写复查备注后关闭；
 6. 使用 `manager / BuildWise123!` 验证项目经理权限，并在“日报中心”刷新当天日报；
@@ -257,7 +286,7 @@ npm run build
 
 ### 图片无法上传或没有检测图
 
-只支持 JPEG、PNG、WEBP，大小上限由 `MAX_UPLOAD_MB` 控制。确认 `backend/storage/uploads` 和 `backend/storage/annotated` 可写；检测图是离线演示的标注副本，真实 Provider 仍需自行实现模型标注输出。
+只支持 JPEG、PNG、WEBP，大小上限由 `MAX_UPLOAD_MB` 控制。确认 `backend/storage/uploads` 可写；检测图由前端在浏览器内叠加检测框绘制，切换「原图 / 检测图」查看，无需后端标注文件。
 
 ## 页面与目录
 
@@ -271,7 +300,8 @@ npm run build
 
 ## 能力边界
 
-- 默认视觉识别和文本生成仍为本地模拟 Provider，响应显式标记 `is_simulated=true`；`RETRIEVAL_PROVIDER=local_keyword` 是离线关键词能力，`chroma` 是本轮接入的真实持久化向量检索投影；
+- 视觉识别可切换为 `safety_hybrid` 十类真实 YOLO 检测（未佩戴安全帽/未戴口罩/未穿安全背心/人/机械/车辆等）；模型未配置或加载失败时降级为模拟结果并显式标记 `is_simulated=true`；文本生成仍为本地模板 Provider；
+- `RETRIEVAL_PROVIDER=local_keyword` 是离线关键词能力，`chroma` 是本轮接入的真实持久化向量检索投影；
 - 未命中本地规范时不编造条款，证据不足会提示人工补充；
 - AI 只能生成工单草稿，人工确认后才写入正式工单；
 - 日报核心数字来自 SQL 聚合，日报文案可由模板或真实文本 Provider 生成；
@@ -280,7 +310,7 @@ npm run build
 
 ## 后续路线
 
-- 接入经验证的 Ultralytics/YOLO 视觉模型和真实标注输出；
+- 为视觉识别接入 LLM 隐患分析（豆包/Claude CLI），补齐 H1-H10 分级与规范条款引用；
 - 接入 OpenAI-compatible 文本 Provider、语音提醒和权限审计；
 - 为 `QualityAgent` 接入真实质量巡检数据源；
 - 为 `GreenAgent` 接入真实材料和碳排数据源；

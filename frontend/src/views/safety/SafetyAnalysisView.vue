@@ -8,6 +8,9 @@ import AppIcon from '@/components/common/AppIcon.vue'
 import AppPageHeader from '@/components/common/AppPageHeader.vue'
 import AppState from '@/components/common/AppState.vue'
 import DetectionPreview from '@/components/safety/DetectionPreview.vue'
+import sampleSiteMixed from '@/assets/samples/sample_site_mixed.jpg'
+import sampleSiteNoHelmet from '@/assets/samples/sample_site_no_helmet.jpg'
+import sampleSiteNoMask from '@/assets/samples/sample_site_no_mask.jpg'
 import { useAppStore } from '@/stores/app'
 import { useProjectStore } from '@/stores/project'
 import { useSafetyStore } from '@/stores/safety'
@@ -25,7 +28,6 @@ const showAnnotated = ref(false)
 const location = ref('B1 北侧临边')
 const workType = ref('主体结构')
 const description = ref('')
-const demoScenario = ref('no_helmet')
 const localError = ref('')
 const confirming = ref(false)
 const confirmedOrderId = ref('')
@@ -35,7 +37,6 @@ const historyTaskId = computed(() => taskIdFromQuery(route.query))
 const historyMode = computed(() => Boolean(historyTaskId.value))
 const assetBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1').replace(/\/api\/v1\/?$/, '')
 const displayImage = computed(() => {
-  if (showAnnotated.value && result.value?.annotated_url) return `${assetBase}${result.value.annotated_url}`
   if (previewUrl.value) return previewUrl.value
   return result.value ? `${assetBase}${result.value.file_url}` : ''
 })
@@ -89,6 +90,20 @@ function acceptFile(candidate: File | undefined): void {
   confirmedOrderId.value = ''
 }
 
+const samples = [
+  { url: sampleSiteMixed, name: '三类违规混合', hint: '高危 · 24 处违规', file: 'sample-site-mixed.jpg' },
+  { url: sampleSiteNoHelmet, name: '未戴安全帽 ×8', hint: '高危 · 29 处违规', file: 'sample-site-no-helmet.jpg' },
+  { url: sampleSiteNoMask, name: '未戴口罩 ×9', hint: '高危 · 34 处违规', file: 'sample-site-no-mask.jpg' },
+]
+
+async function loadSample(sampleUrl: string, fileName: string): Promise<void> {
+  try {
+    const response = await fetch(sampleUrl)
+    const blob = await response.blob()
+    acceptFile(new File([blob], fileName, { type: blob.type || 'image/jpeg' }))
+  } catch (cause) { localError.value = getApiError(cause) }
+}
+
 function handleDragOver(): void { isDragging.value = true }
 function handleDragLeave(): void { isDragging.value = false }
 function handleDrop(event: DragEvent): void {
@@ -101,7 +116,7 @@ async function analyze(): Promise<void> {
   if (!file.value) { localError.value = '请先选择一张现场图片'; return }
   if (!projects.currentProject?.id) { localError.value = '当前没有可用项目'; return }
   try {
-    await safety.analyze(file.value, { project_id: projects.currentProject.id, location: location.value, work_type: workType.value, description: description.value, demo_scenario: demoScenario.value })
+    await safety.analyze(file.value, { project_id: projects.currentProject.id, location: location.value, work_type: workType.value, description: description.value })
   } catch (cause) { localError.value = getApiError(cause) }
 }
 
@@ -125,9 +140,9 @@ function confidence(value: number): string { return `${Math.round(value * 100)}%
       <section class="card input-panel"><div class="card-head"><div><p class="section-kicker">01 · INPUT</p><h3>准备一次现场分析</h3></div><span class="mono">120s timeout</span></div><div class="form-grid">
         <div class="form-field"><label>当前项目</label><select :value="projects.currentProject?.id" @change="selectProject"><option v-for="project in projects.projects" :key="project.id" :value="project.id">{{ project.name }}</option></select></div>
         <div class="form-field"><label>现场图片 <span>*</span></label><label class="upload-zone" :class="{ 'is-dragging': isDragging }" @dragover.prevent="handleDragOver" @dragleave.prevent="handleDragLeave" @drop.prevent="handleDrop"><input type="file" accept="image/jpeg,image/png,image/webp" @change="handleFile" /><img v-if="previewUrl" :src="previewUrl" alt="已选择的现场图片预览" /><span v-else class="upload-icon"><AppIcon name="upload" :size="22" /></span><strong>{{ file ? '重新选择现场图片' : '点击或拖拽上传现场图片' }}</strong><small>JPEG / PNG / WEBP · 最大 10 MB</small><span v-if="file" class="file-name">{{ file.name }}</span></label><p v-if="historyMode" class="helper-text">正在查看历史任务 {{ historyTaskId }}，无需再次上传；选择新图片后可重新分析。</p></div>
+        <div class="form-field"><label>示例图片 <span>点击即用</span></label><div class="sample-row"><button v-for="sample in samples" :key="sample.file" type="button" class="sample-card" @click="loadSample(sample.url, sample.file)"><img :src="sample.url" alt="示例图片" /><span class="sample-name">{{ sample.name }}</span><small class="sample-hint">{{ sample.hint }}</small></button></div></div>
         <div class="two-fields"><div class="form-field"><label for="location">施工位置</label><input id="location" v-model.trim="location" placeholder="如：B1 北侧临边" /></div><div class="form-field"><label for="work-type">作业类型</label><input id="work-type" v-model.trim="workType" placeholder="如：主体结构" /></div></div>
         <div class="form-field"><label for="description">现场说明 <span>可选</span></label><textarea id="description" v-model.trim="description" placeholder="补充光线、作业环境或需要重点关注的信息" /></div>
-        <div class="form-field"><label for="demo-scenario">演示场景</label><select id="demo-scenario" v-model="demoScenario"><option value="no_helmet">未戴安全帽 · 高风险</option><option value="missing_guardrail">临边防护缺失 · 重大风险</option><option value="no_safety_vest">未穿安全背心 · 中风险</option><option value="normal">正常现场 · 无新增隐患</option></select><p class="helper-text">仅用于离线演示，结果会显式标记为模拟并需要人工复核。</p></div>
         <div v-if="localError || safety.error" class="alert alert-error" role="alert">{{ localError || safety.error }}</div>
         <button v-if="!historyMode || file" class="primary-button analyze-button button-block" type="button" :disabled="safety.analyzing || safety.loadingTask" @click="analyze"><AppIcon :name="safety.analyzing ? 'refresh' : 'spark'" :size="16" />{{ safety.analyzing ? 'Agent 正在协同分析…' : historyMode ? '使用新图片重新分析' : '开始安全分析' }}</button><div v-if="safety.analyzing" class="analysis-progress"><span /></div>
       </div><div class="mode-note"><AppIcon name="info" :size="16" /><div><strong>{{ isOfflineSimulated ? '当前为离线模拟模式' : '当前使用真实检测模型' }}</strong><span>{{ isOfflineSimulated ? 'SafetyAgent 使用本地规则；RagAgent 使用内置规范条目；不会调用付费模型。' : 'SafetyAgent 使用 YOLO 目标检测识别现场人员与隐患；RagAgent 使用内置规范条目；LLM 未配置时自动降级，不调用付费模型。' }}</span></div></div></section>
@@ -135,7 +150,7 @@ function confidence(value: number): string { return `${Math.round(value * 100)}%
         <AppState v-if="!result && !safety.analyzing" title="等待一次现场分析" description="右侧结果会完整展示风险、规范依据、AI 工单草稿、工友提醒和执行轨迹。"><template #default><div class="scanner-illustration" aria-hidden="true"><span /><i /><b /></div></template></AppState>
         <AppState v-else-if="safety.analyzing" type="loading" title="五个 Agent 正在协同工作" description="正在识别现场、检索规范并生成可人工复核的草稿。" />
         <template v-else-if="result">
-          <section class="card result-hero"><DetectionPreview :image-url="displayImage" :hazards="result.hazards" alt="安全分析现场图片"><div class="visual-toggle"><button type="button" :class="{ active: !showAnnotated }" @click="showAnnotated = false">原图</button><button type="button" :class="{ active: showAnnotated }" :disabled="!result.annotated_url" @click="showAnnotated = true">检测图</button></div><span class="status-pill dark visual-label">{{ result.is_simulated ? 'AI 模拟结果' : '真实模型结果' }}</span></DetectionPreview><div class="result-summary"><span :class="`risk-badge ${result.risk_level}`"><i class="risk-dot" />{{ riskLabel(result.risk_level) }}</span><h2>{{ result.hazards.length ? `发现 ${result.hazards.length} 项现场隐患` : '本次未发现新增隐患' }}</h2><p class="page-description">{{ result.report_preview }}</p><div class="result-meta"><div><small>任务编号</small><strong class="mono">{{ result.task_id }}</strong></div><div><small>现场位置</small><strong>{{ result.location }}</strong></div></div></div></section>
+          <section class="card result-hero"><DetectionPreview :image-url="displayImage" :hazards="result.hazards" :show-boxes="showAnnotated" alt="安全分析现场图片"><div class="visual-toggle"><button type="button" :class="{ active: !showAnnotated }" @click="showAnnotated = false">原图</button><button type="button" :class="{ active: showAnnotated }" @click="showAnnotated = true">检测图</button></div><span class="status-pill dark visual-label">{{ result.is_simulated ? 'AI 模拟结果' : '真实模型结果' }}</span></DetectionPreview><div class="result-summary"><span :class="`risk-badge ${result.risk_level}`"><i class="risk-dot" />{{ riskLabel(result.risk_level) }}</span><h2>{{ result.hazards.length ? `发现 ${result.hazards.length} 项现场隐患` : '本次未发现新增隐患' }}</h2><p class="page-description">{{ result.report_preview }}</p><div class="result-meta"><div><small>任务编号</small><strong class="mono">{{ result.task_id }}</strong></div><div><small>现场位置</small><strong>{{ result.location }}</strong></div></div></div></section>
           <div class="review-banner"><AppIcon name="info" :size="17" /><span><strong>需要人工复核：</strong>AI 结果仅作为辅助建议，置信度不等于法规符合性；正式工单必须由项目人员确认后创建。</span></div>
           <div class="analysis-grid"><section class="card"><div class="card-head"><div><p class="section-kicker">DETECTIONS</p><h3>识别到的隐患</h3></div><span>{{ result.hazards.length }} 项</span></div><div v-if="result.hazards.length" class="form-grid"><article v-for="hazard in result.hazards" :key="hazard.id" class="hazard-card"><div class="hazard-head"><strong>{{ hazard.hazard_name }}</strong><span :class="`risk-badge ${hazard.risk_level}`"><i class="risk-dot" />{{ riskLabel(hazard.risk_level) }}</span></div><p>{{ hazard.description }}</p><div class="confidence">识别置信度 {{ confidence(hazard.confidence) }}<div class="confidence-bar"><span :style="{ width: `${hazard.confidence * 100}%` }" /></div></div></article></div><AppState v-else title="现场状态正常" description="未识别到可生成整改任务的新增隐患。" /></section><section class="card"><div class="card-head"><div><p class="section-kicker">EVIDENCE</p><h3>规范依据</h3></div><span>{{ result.evidence.length }} 条</span></div><div v-if="result.evidence.length" class="evidence-list"><article v-for="item in result.evidence" :key="item.id || item.article" class="evidence-item"><strong>{{ item.source }}</strong><small>{{ item.article }} · 匹配 {{ item.score ?? 0 }}</small><p>{{ item.content }}</p></article></div><AppState v-else title="暂无足够依据" description="工单会标记为依据待人工补充，不会编造条款。" /></section></div>
           <section v-if="result.work_order_draft" class="card draft-card"><div class="card-head"><div><p class="section-kicker">WORK ORDER DRAFT</p><h3>整改工单草稿</h3></div><span class="status-pill warning">{{ confirmedOrderId ? '已人工确认' : '待人工确认' }}</span></div><p class="page-description">{{ result.work_order_draft.title }} · {{ result.work_order_draft.problem_description }}</p><div class="draft-grid"><div><small>整改位置</small><strong>{{ result.work_order_draft.location }}</strong></div><div><small>建议截止</small><strong>{{ formatDateTime(result.work_order_draft.deadline) }}</strong></div><div><small>责任角色</small><strong>{{ result.work_order_draft.assignee_role }}</strong></div><div><small>来源任务</small><strong class="mono">{{ result.work_order_draft.task_id }}</strong></div></div><div class="two-fields" style="margin-top: 17px"><div><p class="helper-text" style="margin-bottom: 7px">整改要求</p><ul class="clean-list"><li v-for="item in result.work_order_draft.rectification_requirements" :key="item"><AppIcon name="check" :size="14" />{{ item }}</li></ul></div><div><p class="helper-text" style="margin-bottom: 7px">复查要求</p><ul class="clean-list"><li v-for="item in result.work_order_draft.review_requirements" :key="item"><AppIcon name="check" :size="14" />{{ item }}</li></ul></div></div><button class="primary-button button-block" type="button" :disabled="confirming || Boolean(confirmedOrderId)" style="margin-top: 18px" @click="confirmOrder"><AppIcon :name="confirmedOrderId ? 'check' : 'clipboard'" :size="16" />{{ confirmedOrderId ? `已创建工单 ${confirmedOrderId}` : confirming ? '正在创建正式工单…' : '确认创建正式工单' }}</button></section>
@@ -146,3 +161,12 @@ function confidence(value: number): string { return `${Math.round(value * 100)}%
     </div>
   </div>
 </template>
+
+<style scoped>
+.sample-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.sample-card { display: grid; gap: 4px; border: 1px solid var(--line); border-radius: 9px; padding: 6px; background: #fff; text-align: left; cursor: pointer; transition: border-color var(--ease), transform var(--ease); }
+.sample-card:hover { border-color: var(--blue); transform: translateY(-1px); }
+.sample-card img { width: 100%; height: 62px; border-radius: 6px; object-fit: cover; }
+.sample-name { font-size: 10px; font-weight: 700; color: var(--text); }
+.sample-hint { color: var(--muted); font-size: 9px; line-height: 1.3; }
+</style>

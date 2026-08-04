@@ -39,3 +39,6 @@ Thumbs.db
 
 # External reference projects (safety-scout / safehat_identify / Smart_Construction)
 _ext_src/
+
+# 解压的第三方数据集（Construction Site Safety Dataset，运行时数据，不入库）
+archive/

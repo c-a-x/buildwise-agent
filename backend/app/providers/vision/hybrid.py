@@ -51,4 +51,9 @@ class SafetyHybridVisionProvider:
             "risk_level": risk_level,
             "is_simulated": False,
             "provider": f"{self.name}:{'+'.join(sources)}",
+            "vision_llm": {
+                "provider": self.llm.provider,
+                "enabled": llm_ok,
+                "hazard_count": len(llm_hazards),
+            },
         }

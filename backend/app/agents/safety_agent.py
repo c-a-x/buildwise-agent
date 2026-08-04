@@ -31,11 +31,17 @@ class SafetyAgent:
             "finished_at": datetime.now(timezone.utc).isoformat(),
             "duration_ms": 8,
         }
+        provider_info: dict[str, str] = {"vision": str(result.get("provider", "mock"))}
+        llm_state = result.get("vision_llm")
+        if isinstance(llm_state, dict):
+            provider_info["vision_llm_provider"] = str(llm_state.get("provider") or "off")
+            provider_info["vision_llm_enabled"] = str(bool(llm_state.get("enabled"))).lower()
+            provider_info["vision_llm_hazards"] = str(int(llm_state.get("hazard_count") or 0))
         return {
             "hazards": hazards if isinstance(hazards, list) else [],
             "risk_level": str(result.get("risk_level", "normal")),
             "is_simulated": bool(result.get("is_simulated", True)),
-            "provider_info": {"vision": str(result.get("provider", "mock"))},
+            "provider_info": provider_info,
             "review_required": True,
             "agent_trace": [trace],
         }

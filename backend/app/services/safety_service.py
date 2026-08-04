@@ -90,6 +90,13 @@ class SafetyService:
                     confidence=float(hazard.get("confidence", 0.0)),
                     risk_level=str(hazard.get("risk_level", state.get("risk_level", "medium"))),
                     bbox_json=hazard.get("bbox"),
+                    metadata_json={
+                        "source": hazard.get("source"),
+                        "regulation": hazard.get("regulation"),
+                        "suggestion": hazard.get("suggestion"),
+                        "is_major": hazard.get("is_major"),
+                        "major_basis": hazard.get("major_basis"),
+                    },
                     review_required=True,
                 )
                 self.db.add(incident)
@@ -207,6 +214,7 @@ class SafetyService:
 
     @staticmethod
     def _hazard_dict(incident: Incident) -> dict[str, object]:
+        metadata = incident.metadata_json if isinstance(incident.metadata_json, dict) else {}
         return {
             "id": incident.id,
             "hazard_type": incident.hazard_type,
@@ -216,6 +224,11 @@ class SafetyService:
             "risk_level": incident.risk_level,
             "bbox": incident.bbox_json,
             "review_required": incident.review_required,
+            "source": metadata.get("source"),
+            "regulation": metadata.get("regulation"),
+            "suggestion": metadata.get("suggestion"),
+            "is_major": metadata.get("is_major"),
+            "major_basis": metadata.get("major_basis"),
         }
 
     @staticmethod

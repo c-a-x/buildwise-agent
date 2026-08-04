@@ -46,10 +46,50 @@ const visionLabel = computed(() => {
   const vision = result.value.provider_info?.vision
   if (!vision) return result.value.is_simulated ? 'AI 模拟结果' : '真实模型结果'
   if (vision === 'mock') return 'Mock Provider 在线'
-  const short = vision.replace(/^safety_hybrid:?/, '').replace(/^safety_hybrid$/, 'yolo')
-  return `模型在线 · ${short || vision}`
+  const parts = vision.replace(/^safety_hybrid:?/, '').split('+').filter(Boolean).map(shortenVisionPart)
+  return `模型在线 · ${parts.length ? parts.join(' + ') : vision}`
 })
 const isOfflineSimulated = computed(() => !result.value || result.value.is_simulated)
+
+// 隐患按来源拆分：YOLO/mock 归「识别到的隐患」，LLM 归「深度分析」专属卡片
+const yoloHazards = computed(() => (result.value?.hazards ?? []).filter((hazard) => hazard.source !== 'llm'))
+const visionLlmHazards = computed(() => (result.value?.hazards ?? []).filter((hazard) => hazard.source === 'llm'))
+const visionLlmProvider = computed(() => result.value?.provider_info?.vision_llm_provider ?? '')
+const visionLlmEnabled = computed(() => result.value?.provider_info?.vision_llm_enabled === 'true')
+const visionLlmHasStatus = computed(() => Boolean(visionLlmProvider.value) || visionLlmHazards.value.length > 0)
+const visionLlmProviderLabel = computed(() => {
+  const provider = visionLlmProvider.value
+  if (provider === 'doubao') return '豆包'
+  if (provider === 'claude_cli') return 'Claude CLI'
+  return provider || 'LLM'
+})
+const llmNoteTitle = computed(() => {
+  if (!result.value) return '当前为离线模拟模式'
+  if (isOfflineSimulated.value) return '当前为离线模拟模式'
+  return visionLlmEnabled.value ? '当前使用真实检测模型 + LLM 深度分析' : '当前使用真实检测模型'
+})
+const llmNoteText = computed(() => {
+  if (!result.value || isOfflineSimulated.value) {
+    return 'SafetyAgent 使用本地规则；RagAgent 使用内置规范条目；不会调用付费模型。'
+  }
+  if (visionLlmEnabled.value) {
+    return 'SafetyAgent 使用 YOLO 识别现场人员与隐患；Vision LLM 提供 H1-H10 深层分析与规范依据。'
+  }
+  return 'SafetyAgent 使用 YOLO 目标检测识别现场人员与隐患；RagAgent 使用内置规范条目；LLM 未配置时自动降级，不调用付费模型。'
+})
+
+function shortenVisionPart(part: string): string {
+  if (part === 'yolo') return 'YOLO'
+  if (part === 'doubao') return '豆包 LLM'
+  if (part === 'claude' || part === 'claude_cli') return 'Claude LLM'
+  return part
+}
+
+function sourceLabel(source: string): string {
+  if (source === 'yolo') return 'YOLO 检测'
+  if (source === 'llm') return 'LLM 分析'
+  return source
+}
 
 function selectProject(event: Event): void {
   projects.selectProject((event.target as HTMLSelectElement).value)
@@ -145,14 +185,15 @@ function confidence(value: number): string { return `${Math.round(value * 100)}%
         <div class="form-field"><label for="description">现场说明 <span>可选</span></label><textarea id="description" v-model.trim="description" placeholder="补充光线、作业环境或需要重点关注的信息" /></div>
         <div v-if="localError || safety.error" class="alert alert-error" role="alert">{{ localError || safety.error }}</div>
         <button v-if="!historyMode || file" class="primary-button analyze-button button-block" type="button" :disabled="safety.analyzing || safety.loadingTask" @click="analyze"><AppIcon :name="safety.analyzing ? 'refresh' : 'spark'" :size="16" />{{ safety.analyzing ? 'Agent 正在协同分析…' : historyMode ? '使用新图片重新分析' : '开始安全分析' }}</button><div v-if="safety.analyzing" class="analysis-progress"><span /></div>
-      </div><div class="mode-note"><AppIcon name="info" :size="16" /><div><strong>{{ isOfflineSimulated ? '当前为离线模拟模式' : '当前使用真实检测模型' }}</strong><span>{{ isOfflineSimulated ? 'SafetyAgent 使用本地规则；RagAgent 使用内置规范条目；不会调用付费模型。' : 'SafetyAgent 使用 YOLO 目标检测识别现场人员与隐患；RagAgent 使用内置规范条目；LLM 未配置时自动降级，不调用付费模型。' }}</span></div></div></section>
+      </div><div class="mode-note"><AppIcon name="info" :size="16" /><div><strong>{{ llmNoteTitle }}</strong><span>{{ llmNoteText }}</span></div></div></section>
       <div class="result-column">
         <AppState v-if="!result && !safety.analyzing" title="等待一次现场分析" description="右侧结果会完整展示风险、规范依据、AI 工单草稿、工友提醒和执行轨迹。"><template #default><div class="scanner-illustration" aria-hidden="true"><span /><i /><b /></div></template></AppState>
         <AppState v-else-if="safety.analyzing" type="loading" title="五个 Agent 正在协同工作" description="正在识别现场、检索规范并生成可人工复核的草稿。" />
         <template v-else-if="result">
           <section class="card result-hero"><DetectionPreview :image-url="displayImage" :hazards="result.hazards" :show-boxes="showAnnotated" alt="安全分析现场图片"><div class="visual-toggle"><button type="button" :class="{ active: !showAnnotated }" @click="showAnnotated = false">原图</button><button type="button" :class="{ active: showAnnotated }" @click="showAnnotated = true">检测图</button></div><span class="status-pill dark visual-label">{{ result.is_simulated ? 'AI 模拟结果' : '真实模型结果' }}</span></DetectionPreview><div class="result-summary"><span :class="`risk-badge ${result.risk_level}`"><i class="risk-dot" />{{ riskLabel(result.risk_level) }}</span><h2>{{ result.hazards.length ? `发现 ${result.hazards.length} 项现场隐患` : '本次未发现新增隐患' }}</h2><p class="page-description">{{ result.report_preview }}</p><div class="result-meta"><div><small>任务编号</small><strong class="mono">{{ result.task_id }}</strong></div><div><small>现场位置</small><strong>{{ result.location }}</strong></div></div></div></section>
           <div class="review-banner"><AppIcon name="info" :size="17" /><span><strong>需要人工复核：</strong>AI 结果仅作为辅助建议，置信度不等于法规符合性；正式工单必须由项目人员确认后创建。</span></div>
-          <div class="analysis-grid"><section class="card"><div class="card-head"><div><p class="section-kicker">DETECTIONS</p><h3>识别到的隐患</h3></div><span>{{ result.hazards.length }} 项</span></div><div v-if="result.hazards.length" class="form-grid"><article v-for="hazard in result.hazards" :key="hazard.id" class="hazard-card"><div class="hazard-head"><strong>{{ hazard.hazard_name }}</strong><span :class="`risk-badge ${hazard.risk_level}`"><i class="risk-dot" />{{ riskLabel(hazard.risk_level) }}</span></div><p>{{ hazard.description }}</p><div class="confidence">识别置信度 {{ confidence(hazard.confidence) }}<div class="confidence-bar"><span :style="{ width: `${hazard.confidence * 100}%` }" /></div></div></article></div><AppState v-else title="现场状态正常" description="未识别到可生成整改任务的新增隐患。" /></section><section class="card"><div class="card-head"><div><p class="section-kicker">EVIDENCE</p><h3>规范依据</h3></div><span>{{ result.evidence.length }} 条</span></div><div v-if="result.evidence.length" class="evidence-list"><article v-for="item in result.evidence" :key="item.id || item.article" class="evidence-item"><strong>{{ item.source }}</strong><small>{{ item.article }} · 匹配 {{ item.score ?? 0 }}</small><p>{{ item.content }}</p></article></div><AppState v-else title="暂无足够依据" description="工单会标记为依据待人工补充，不会编造条款。" /></section></div>
+          <div class="analysis-grid"><section class="card"><div class="card-head"><div><p class="section-kicker">DETECTIONS</p><h3>识别到的隐患</h3></div><span>{{ yoloHazards.length }} 项</span></div><div v-if="yoloHazards.length" class="form-grid"><article v-for="hazard in yoloHazards" :key="hazard.id" class="hazard-card" :class="{ 'is-major': hazard.is_major }"><div class="hazard-head"><strong>{{ hazard.hazard_name }}</strong><span class="hazard-badges"><span v-if="hazard.source" class="source-tag" :class="hazard.source">{{ sourceLabel(hazard.source) }}</span><span v-if="hazard.is_major" class="major-tag"><AppIcon name="shield" :size="11" />重大</span><span :class="`risk-badge ${hazard.risk_level}`"><i class="risk-dot" />{{ riskLabel(hazard.risk_level) }}</span></span></div><p>{{ hazard.description }}</p><div v-if="hazard.regulation" class="hazard-detail"><AppIcon name="book" :size="13" /><span><b>规范依据</b>{{ hazard.regulation }}</span></div><div v-if="hazard.suggestion" class="hazard-detail"><AppIcon name="spark" :size="13" /><span><b>整改建议</b>{{ hazard.suggestion }}</span></div><div v-if="hazard.is_major" class="major-banner"><AppIcon name="shield" :size="14" /><span><b>重大事故隐患</b>{{ hazard.major_basis || '符合重大事故隐患判定情形' }}</span></div><div class="confidence">识别置信度 {{ confidence(hazard.confidence) }}<div class="confidence-bar"><span :style="{ width: `${hazard.confidence * 100}%` }" /></div></div></article></div><AppState v-else title="现场状态正常" description="未识别到可生成整改任务的新增隐患。" /></section><section class="card"><div class="card-head"><div><p class="section-kicker">EVIDENCE</p><h3>规范依据</h3></div><span>{{ result.evidence.length }} 条</span></div><div v-if="result.evidence.length" class="evidence-list"><article v-for="item in result.evidence" :key="item.id || item.article" class="evidence-item"><strong>{{ item.source }}</strong><small>{{ item.article }} · 匹配 {{ item.score ?? 0 }}</small><p>{{ item.content }}</p></article></div><AppState v-else title="暂无足够依据" description="工单会标记为依据待人工补充，不会编造条款。" /></section></div>
+          <section v-if="visionLlmHasStatus" class="card llm-card"><div class="card-head"><div><p class="section-kicker">VISION LLM</p><h3>LLM 深度隐患分析</h3></div><span class="status-pill" :class="visionLlmEnabled ? 'dark' : 'warning'">{{ visionLlmEnabled ? `已启用 · ${visionLlmProviderLabel}` : '未启用 · 纯 YOLO' }}</span></div><template v-if="visionLlmEnabled"><div v-if="visionLlmHazards.length" class="llm-hazard-list"><article v-for="hazard in visionLlmHazards" :key="hazard.id" class="llm-hazard-card" :class="{ 'is-major': hazard.is_major }"><div class="llm-hazard-head"><span class="llm-category mono">{{ hazard.hazard_type.toUpperCase() }}</span><strong>{{ hazard.hazard_name }}</strong><span :class="`risk-badge ${hazard.risk_level}`"><i class="risk-dot" />{{ riskLabel(hazard.risk_level) }}</span></div><p>{{ hazard.description }}</p><div v-if="hazard.regulation" class="hazard-detail"><AppIcon name="book" :size="13" /><span><b>规范依据</b>{{ hazard.regulation }}</span></div><div v-if="hazard.suggestion" class="hazard-detail"><AppIcon name="spark" :size="13" /><span><b>整改建议</b>{{ hazard.suggestion }}</span></div><div v-if="hazard.is_major" class="major-banner"><AppIcon name="shield" :size="14" /><span><b>重大事故隐患</b>{{ hazard.major_basis || '符合重大事故隐患判定情形' }}</span></div></article></div><AppState v-else title="LLM 未发现深层隐患" description="本次图像经 LLM 复核，未输出可确认的 H1-H10 新增隐患。" /></template><AppState v-else title="LLM 深度分析未启用" description="未配置 Vision LLM 或调用失败，当前为纯 YOLO 检测；在 backend/.env 配置 VISION_LLM_PROVIDER 后自动启用。" /></section>
           <section v-if="result.work_order_draft" class="card draft-card"><div class="card-head"><div><p class="section-kicker">WORK ORDER DRAFT</p><h3>整改工单草稿</h3></div><span class="status-pill warning">{{ confirmedOrderId ? '已人工确认' : '待人工确认' }}</span></div><p class="page-description">{{ result.work_order_draft.title }} · {{ result.work_order_draft.problem_description }}</p><div class="draft-grid"><div><small>整改位置</small><strong>{{ result.work_order_draft.location }}</strong></div><div><small>建议截止</small><strong>{{ formatDateTime(result.work_order_draft.deadline) }}</strong></div><div><small>责任角色</small><strong>{{ result.work_order_draft.assignee_role }}</strong></div><div><small>来源任务</small><strong class="mono">{{ result.work_order_draft.task_id }}</strong></div></div><div class="two-fields" style="margin-top: 17px"><div><p class="helper-text" style="margin-bottom: 7px">整改要求</p><ul class="clean-list"><li v-for="item in result.work_order_draft.rectification_requirements" :key="item"><AppIcon name="check" :size="14" />{{ item }}</li></ul></div><div><p class="helper-text" style="margin-bottom: 7px">复查要求</p><ul class="clean-list"><li v-for="item in result.work_order_draft.review_requirements" :key="item"><AppIcon name="check" :size="14" />{{ item }}</li></ul></div></div><button class="primary-button button-block" type="button" :disabled="confirming || Boolean(confirmedOrderId)" style="margin-top: 18px" @click="confirmOrder"><AppIcon :name="confirmedOrderId ? 'check' : 'clipboard'" :size="16" />{{ confirmedOrderId ? `已创建工单 ${confirmedOrderId}` : confirming ? '正在创建正式工单…' : '确认创建正式工单' }}</button></section>
           <section class="card"><div class="card-head"><div><p class="section-kicker">WORKER CARE</p><h3>工友安全提醒</h3></div><span class="status-pill dark" style="background: var(--navy-900)">模板回答</span></div><p class="worker-message">{{ result.worker_message || '本次没有需要发送的工友提醒。' }}</p></section>
           <section class="card"><div class="card-head"><div><p class="section-kicker">AGENT TRACE</p><h3>五节点执行轨迹</h3></div><span class="mono">review_required=true</span></div><div class="trace-list"><div v-for="(item, index) in result.agent_trace" :key="`${item.agent}-${index}`" class="trace-item" :class="item.status"><span class="trace-node">{{ String(index + 1).padStart(2, '0') }}</span><div><strong>{{ item.agent }}</strong><small>{{ item.message }}</small></div><span class="trace-time">{{ item.duration_ms ? `${item.duration_ms}ms` : item.status }}</span></div></div></section>
@@ -169,4 +210,24 @@ function confidence(value: number): string { return `${Math.round(value * 100)}%
 .sample-card img { width: 100%; height: 62px; border-radius: 6px; object-fit: cover; }
 .sample-name { font-size: 10px; font-weight: 700; color: var(--text); }
 .sample-hint { color: var(--muted); font-size: 9px; line-height: 1.3; }
+.hazard-badges { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+.source-tag { display: inline-flex; align-items: center; min-height: 20px; border-radius: 999px; padding: 0 8px; font-size: 9px; font-weight: 800; }
+.source-tag.yolo { color: #2c6fda; background: #eaf2ff; }
+.source-tag.llm { color: #7c3aed; background: #f3e8ff; }
+.major-tag { display: inline-flex; align-items: center; gap: 3px; min-height: 20px; border-radius: 999px; padding: 0 8px; color: #fff; background: var(--danger); font-size: 9px; font-weight: 800; }
+.hazard-card.is-major { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger); background: #fff7f7; }
+.hazard-detail { display: flex; align-items: flex-start; gap: 7px; margin-top: 9px; color: var(--text-soft); font-size: 11px; line-height: 1.55; }
+.hazard-detail .app-icon { flex: none; margin-top: 1px; color: var(--blue); }
+.hazard-detail b { margin-right: 5px; color: var(--text); font-weight: 800; }
+.major-banner { display: flex; align-items: flex-start; gap: 7px; margin-top: 10px; border: 1px solid #f0c4c6; border-radius: 8px; padding: 8px 10px; color: #a13237; background: #fdecec; font-size: 11px; line-height: 1.5; }
+.major-banner .app-icon { flex: none; margin-top: 1px; color: var(--danger); }
+.major-banner b { margin-right: 5px; font-weight: 800; }
+.llm-card { border-color: #e3d5fb; background: linear-gradient(145deg, #fbf8ff, #f5efff); }
+.llm-hazard-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.llm-hazard-card { border: 1px solid #e8dcfb; border-radius: 10px; padding: 14px; background: #fff; }
+.llm-hazard-card.is-major { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger); }
+.llm-hazard-head { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
+.llm-hazard-head strong { font-size: 13px; }
+.llm-category { display: grid; width: 34px; height: 26px; place-items: center; border-radius: 7px; color: #fff; background: #8b5cf6; font-size: 10px; font-weight: 800; }
+.llm-hazard-card p { margin-top: 9px; color: var(--text-soft); font-size: 12px; line-height: 1.6; }
 </style>

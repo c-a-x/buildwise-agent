@@ -104,6 +104,7 @@ class Incident(Base):
     confidence = Column(Float, nullable=False)
     risk_level = Column(String(32), nullable=False)
     bbox_json = Column(JSON, nullable=True)
+    metadata_json = Column(JSON, default=dict, nullable=False)
     review_required = Column(Boolean, default=True, nullable=False)
     reviewed_by = Column(String(64), ForeignKey("users.id"), nullable=True)
     reviewed_at = Column(DateTime(timezone=True), nullable=True)

@@ -14,6 +14,11 @@ class HazardRead(BaseModel):
     risk_level: RiskLevel
     bbox: list[float] | None = None
     review_required: bool = True
+    source: str | None = None
+    regulation: str | None = None
+    suggestion: str | None = None
+    is_major: bool | None = None
+    major_basis: str | None = None
 
 
 class EvidenceRead(BaseModel):

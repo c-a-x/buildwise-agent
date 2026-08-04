@@ -9,6 +9,11 @@ export interface Hazard {
   risk_level: RiskLevel
   bbox: number[] | null
   review_required: boolean
+  source?: string | null
+  regulation?: string | null
+  suggestion?: string | null
+  is_major?: boolean | null
+  major_basis?: string | null
 }
 
 export interface Evidence {

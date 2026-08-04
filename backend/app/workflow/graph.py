@@ -39,10 +39,15 @@ class BuildWiseWorkflow:
         result = self.graph.invoke(state)
         # 视觉节点(SafetyAgent)写入的是 provider 实际执行结果(如 safety_hybrid:yolo)，
         # 以此为准；不再用静态 provider 名字粗判，避免真实检测被误标为模拟。
-        actual_vision = (result.get("provider_info") or {}).get("vision")
+        agent_provider_info = dict(result.get("provider_info") or {})
+        actual_vision = agent_provider_info.get("vision")
         result["provider_info"] = dict(self.provider_info)
         if actual_vision:
             result["provider_info"]["vision"] = actual_vision
+        # 保留 agent 提供的附加 provider 信息（如 vision_llm 启用状态）
+        for key, value in agent_provider_info.items():
+            if key != "vision":
+                result["provider_info"][key] = str(value)
         result["is_simulated"] = bool(result.get("is_simulated", True))
         result["review_required"] = True
         return result

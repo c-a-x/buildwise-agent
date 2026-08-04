@@ -37,7 +37,7 @@ def test_class_to_hazard_compliance_ignored():
         assert class_to_hazard(label, 0.9, [0, 0, 1, 1]) is None
 
 
-def test_llm_finding_to_hazard_merges_regulation_and_suggestion():
+def test_llm_finding_to_hazard_carries_struct_fields():
     hazard = llm_finding_to_hazard(
         {
             "category_code": "H1",
@@ -53,9 +53,12 @@ def test_llm_finding_to_hazard_merges_regulation_and_suggestion():
     )
     assert hazard["hazard_type"] == "llm_h1"
     assert hazard["risk_level"] == "high"
-    assert "规范依据" in hazard["description"]
-    assert "整改建议" in hazard["description"]
-    assert "重大事故隐患判定" in hazard["description"]
+    assert hazard["description"] == "临边作业未系安全带"
+    assert hazard["source"] == "llm"
+    assert "JGJ80-2016" in hazard["regulation"]
+    assert hazard["suggestion"] == "立即停止作业并系挂安全带"
+    assert hazard["is_major"] is True
+    assert hazard["major_basis"] == "临边高度超过2m"
     assert hazard["bbox"] is None
 
 
@@ -113,3 +116,7 @@ def test_hybrid_yolo_only_not_simulated(monkeypatch):
     assert result["is_simulated"] is False
     assert "yolo" in str(result["provider"])
     assert result["hazards"][0]["hazard_type"] == "no_helmet"
+    assert result["hazards"][0]["source"] == "yolo"
+    # LLM 未配置：provider 不启用，但返回结构体标出 off 状态
+    assert result["vision_llm"]["provider"] == "off"
+    assert result["vision_llm"]["enabled"] is False

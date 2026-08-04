@@ -64,6 +64,7 @@ def class_to_hazard(label: str, confidence: float, bbox: list[float]) -> dict[st
         "confidence": round(float(confidence), 4),
         "risk_level": risk_level,
         "bbox": [float(value) for value in bbox],
+        "source": "yolo",
     }
 
 
@@ -73,30 +74,25 @@ def llm_finding_to_hazard(finding: dict[str, Any]) -> dict[str, Any]:
     LLM 期望字段（对齐 safety-scout 的 H1-H10 结构）：
     category_code(H1..H10) / category_name / description / severity /
     regulation / suggestion / confidence / is_major / major_basis。
-    regulation 与 suggestion 不新增 schema 字段，并入 description。
+    description 保持精简；regulation、suggestion、is_major、major_basis
+    以结构化字段单独输出，供前端「LLM 深度分析」卡片独立展示。
     """
     code = str(finding.get("category_code", "")).strip()
-    description = str(finding.get("description", "")).strip()
-    regulation = str(finding.get("regulation", "")).strip()
-    suggestion = str(finding.get("suggestion", "")).strip()
-    major_basis = str(finding.get("major_basis", "")).strip()
-
-    detail = description
-    if regulation:
-        detail = f"{detail}；规范依据：{regulation}"
-    if suggestion:
-        detail = f"{detail}；整改建议：{suggestion}"
-    if finding.get("is_major") and major_basis:
-        detail = f"{detail}；重大事故隐患判定：{major_basis}"
+    description = str(finding.get("description", "")).strip() or "未提供具体描述"
 
     hazard_type = f"llm_{code.lower()}" if code.startswith("H") else "llm_finding"
     return {
         "hazard_type": hazard_type,
         "hazard_name": str(finding.get("category_name") or "现场隐患"),
-        "description": detail or "未提供具体描述",
+        "description": description,
         "confidence": round(float(finding.get("confidence") or 0.85), 4),
         "risk_level": _normalize_risk(finding.get("severity")),
         "bbox": None,
+        "source": "llm",
+        "regulation": str(finding.get("regulation", "")).strip(),
+        "suggestion": str(finding.get("suggestion", "")).strip(),
+        "is_major": bool(finding.get("is_major")),
+        "major_basis": str(finding.get("major_basis", "")).strip(),
     }
 
 

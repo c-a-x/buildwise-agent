@@ -60,6 +60,7 @@ class Settings:
     vision_llm_provider: str = os.getenv("VISION_LLM_PROVIDER", "off")  # claude_cli | doubao | off
     vision_llm_claude_cmd: str = os.getenv("VISION_LLM_CLAUDE_CMD", "claude")
     vision_llm_timeout: int = int(os.getenv("VISION_LLM_TIMEOUT", "300"))
+    alert_webhook_url: str = os.getenv("ALERT_WEBHOOK_URL", "")  # ESP32 硬报警地址，默认空禁用
     retrieval_provider: str = os.getenv("RETRIEVAL_PROVIDER", "local_keyword")
     chroma_min_score: float = float(os.getenv("CHROMA_MIN_SCORE", "0.42"))
     text_provider: str = os.getenv("TEXT_PROVIDER", "template")

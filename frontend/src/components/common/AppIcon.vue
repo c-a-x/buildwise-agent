@@ -31,6 +31,7 @@ export type IconName =
   | 'clock'
   | 'download'
   | 'mic'
+  | 'camera'
 
 const props = withDefaults(defineProps<{ name: IconName; size?: number }>(), { size: 18 })
 </script>
@@ -70,5 +71,6 @@ const props = withDefaults(defineProps<{ name: IconName; size?: number }>(), { s
     <template v-else-if="props.name === 'clock'"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></template>
     <template v-else-if="props.name === 'download'"><path d="M12 4v11M7 11l5 5 5-5M5 20h14" /></template>
     <template v-else-if="props.name === 'mic'"><rect x="8" y="3" width="8" height="12" rx="4" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" /></template>
+    <template v-else-if="props.name === 'camera'"><path d="M3 8h3l2-3h8l2 3h3v12H3V8Z" /><circle cx="12" cy="13" r="3.5" /></template>
   </svg>
 </template>

@@ -12,6 +12,7 @@ const protectedRoutes: RouteRecordRaw[] = [
   { path: '/dashboard', name: 'dashboard', component: () => import('@/views/dashboard/DashboardView.vue'), meta: { requiresAuth: true, title: '项目工作台' } },
   { path: '/projects', name: 'projects', component: () => import('@/views/projects/ProjectListView.vue'), meta: { requiresAuth: true, title: '项目管理' } },
   { path: '/safety/analyze', name: 'safety-analyze', component: () => import('@/views/safety/SafetyAnalysisView.vue'), meta: { requiresAuth: true, title: '现场安全分析', roles: ['admin', 'project_manager', 'safety_officer'] } },
+  { path: '/safety/realtime', name: 'safety-realtime', component: () => import('@/views/safety/RealtimeMonitorView.vue'), meta: { requiresAuth: true, title: '实时监控', roles: ['admin', 'project_manager', 'safety_officer'] } },
   { path: '/safety/history', name: 'safety-history', component: () => import('@/views/safety/SafetyHistoryView.vue'), meta: { requiresAuth: true, title: '安全历史', roles: ['admin', 'project_manager', 'safety_officer', 'quality_inspector'] } },
   { path: '/work-orders', name: 'work-orders', component: () => import('@/views/work-orders/WorkOrderListView.vue'), meta: { requiresAuth: true, title: '整改工单' } },
   { path: '/work-orders/:id', name: 'work-order-detail', component: () => import('@/views/work-orders/WorkOrderDetailView.vue'), meta: { requiresAuth: true, title: '工单详情' } },

@@ -1,6 +1,6 @@
 import http from './http'
 import type { ApiEnvelope } from '@/types/api'
-import type { SafetyAnalysisResult, SafetyTaskSummary } from '@/types/safety'
+import type { DetectFrameResult, SafetyAnalysisResult, SafetyTaskSummary } from '@/types/safety'
 
 export interface SafetyAnalyzePayload {
   project_id: string
@@ -26,6 +26,13 @@ export const safetyApi = {
   },
   async task(taskId: string): Promise<SafetyAnalysisResult> {
     const response = await http.get<ApiEnvelope<SafetyAnalysisResult>>(`/safety/tasks/${taskId}`)
+    return response.data.data
+  },
+  // 实时单帧检测：只跑 YOLO、不落库。显式短超时，保证轮询不被 FormData 拦截器拖到 120s
+  async detectFrame(file: Blob, timeoutMs = 10_000): Promise<DetectFrameResult> {
+    const form = new FormData()
+    form.append('image', file, 'frame.jpg')
+    const response = await http.post<ApiEnvelope<DetectFrameResult>>('/safety/detect-frame', form, { timeout: timeoutMs })
     return response.data.data
   },
 }

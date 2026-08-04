@@ -183,6 +183,34 @@ VISION_LLM_PROVIDER=off          # claude_cli | doubao | off
 
 **模型放置**：模型文件是运行期数据、不入 Git。可从数据集训练产物中复制 `results_yolov8n_100e/kaggle/working/runs/detect/train/weights/best.pt` 到 `backend/storage/models/yolov8n-10cls.pt`，或用 ultralytics 在同一 10 类数据集上自行训练并替换。
 
+## 实时安全监测与硬件接口
+
+「实时监控」页（`/safety/realtime`）把现场视频源逐帧送入后端 YOLO 检测，浏览器内叠加检测框，检测到高危违规时触发软报警；可选配 ESP32 硬报警（蜂鸣器）。
+
+**视频源（浏览器内切换）**：
+
+- **演示模式**：循环播放 `frontend/src/assets/samples/` 内置示例图，无摄像头也能演示检测与报警闭环；
+- **本机摄像头**：`getUserMedia` 读取 USB 摄像头，画面仅在本浏览器内分析，不上传存储；
+- **ESP32-CAM**：填写 `http://<ip>:81/stream` 的 MJPG 流地址，经后端代理接入。
+
+**检测链路**：前端 canvas 按 1 帧/秒抓帧 → `POST /api/v1/safety/detect-frame` → YOLO 检测（不落库、不建工单、不跑 LLM）→ 返回 hazard 列表与归一化检测框 → 浏览器叠加画框。
+
+**软报警规则**：连续 2 帧出现高危（高风险/重大风险）或未戴安全帽、未戴口罩、未穿反光背心违规即触发告警横幅与提示音；连续 3 帧正常自动解除。抓帧被浏览器安全策略阻止（MJPG 跨域未授权）时自动降级为仅显示画面不检测。
+
+后端接口：
+
+| 接口 | 说明 |
+| --- | --- |
+| `POST /api/v1/safety/detect-frame` | 实时单帧 YOLO 检测。模型缺失时返回 `available=false` 而非 500；临时帧写入 `backend/storage/tmp` 后立即清理 |
+| `GET /api/v1/safety/mjpeg-proxy` | 透传 ESP32-CAM 的 MJPG 流并补 `Access-Control-Allow-Origin: *`（否则 canvas 抓帧会被浏览器阻止）。仅放行本机/内网地址（SSRF 防护）；token 走 query 参数，仅限本地演示场景 |
+
+**ESP32 硬报警（可选，默认禁用）**：检测到 high/critical 隐患时，后端经 `BackgroundTasks` 后台 `POST` 到 `ALERT_WEBHOOK_URL`（fire-and-forget、失败静默、绝不阻塞检测主链路）。需在 ESP32 固件侧实现 HTTP 服务接收该 POST 并驱动 GPIO 蜂鸣器；固件不在本仓库。
+
+```env
+# backend/.env —— 未配置则硬报警禁用，不影响实时监测主链路
+ALERT_WEBHOOK_URL=http://192.168.1.50/api/alert
+```
+
 ## Chroma 规范知识库
 
 只导入来源明确且已获授权的规范文件；仓库不提供来源不明的国家标准文件，也不虚构标准编号或条款。支持三种输入：
@@ -290,7 +318,7 @@ npm run build
 
 ## 页面与目录
 
-页面和路由覆盖登录、注册、找回密码、仪表盘、项目管理、安全分析、安全历史、整改工单、工单详情、工友助手、日报及历史、质量占位、绿色占位、知识库、个人资料、系统设置，以及 403/404 页面。
+页面和路由覆盖登录、注册、找回密码、仪表盘、项目管理、安全分析、实时监控、安全历史、整改工单、工单详情、工友助手、日报及历史、质量占位、绿色占位、知识库、个人资料、系统设置，以及 403/404 页面。
 
 - `frontend/`：Vue 3 + TypeScript + Pinia + Vue Router；
 - `backend/`：FastAPI + Pydantic + SQLAlchemy + Alembic + LangGraph；
@@ -301,6 +329,7 @@ npm run build
 ## 能力边界
 
 - 视觉识别可切换为 `safety_hybrid` 十类真实 YOLO 检测（未佩戴安全帽/未戴口罩/未穿安全背心/人/机械/车辆等）；模型未配置或加载失败时降级为模拟结果并显式标记 `is_simulated=true`；文本生成仍为本地模板 Provider；
+- 实时监控为逐帧 YOLO 检测（1 帧/秒、仅本机分析），模型缺失时降级为仅显示画面不检测；ESP32 蜂鸣器硬报警为预留接口，需固件侧实现 HTTP 服务接收 webhook 驱动 GPIO；
 - `RETRIEVAL_PROVIDER=local_keyword` 是离线关键词能力，`chroma` 是本轮接入的真实持久化向量检索投影；
 - 未命中本地规范时不编造条款，证据不足会提示人工补充；
 - AI 只能生成工单草稿，人工确认后才写入正式工单；

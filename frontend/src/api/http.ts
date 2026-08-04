@@ -11,7 +11,10 @@ const http: AxiosInstance = axios.create({
 http.interceptors.request.use((config) => {
   const token = getToken()
   if (token) config.headers.Authorization = `Bearer ${token}`
-  if (config.data instanceof FormData) config.timeout = 120_000
+  // 仅默认超时被 FormData 覆盖到 120s；实时检测等传显式短超时的请求保留原超时
+  if (config.data instanceof FormData && config.timeout === http.defaults.timeout) {
+    config.timeout = 120_000
+  }
   return config
 })
 

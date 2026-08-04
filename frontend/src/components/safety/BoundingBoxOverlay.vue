@@ -1,9 +1,15 @@
 <script setup lang="ts">
-import type { Hazard } from '@/types/safety'
+// 只声明实际用到的字段：Hazard 与 DetectFrameHazard 均可传入
+interface OverlayHazard {
+  id: string
+  hazard_name: string
+  confidence: number
+  bbox: number[] | null
+}
 
-const props = defineProps<{ hazards: Hazard[] }>()
+const props = defineProps<{ hazards: OverlayHazard[] }>()
 
-function boxStyle(hazard: Hazard): Record<string, string> | null {
+function boxStyle(hazard: OverlayHazard): Record<string, string> | null {
   const bbox = hazard.bbox
   if (!bbox || bbox.length < 4 || !bbox.slice(0, 4).every((value) => Number.isFinite(value))) return null
   const left = bbox[0]

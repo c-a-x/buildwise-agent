@@ -56,6 +56,27 @@ class WorkOrderDraft(BaseModel):
     is_simulated: bool = True
 
 
+class DetectFrameHazard(BaseModel):
+    id: str
+    hazard_type: str
+    hazard_name: str
+    description: str
+    confidence: float
+    risk_level: RiskLevel
+    bbox: list[float] | None = None
+    source: str | None = None
+
+
+class DetectFrameResponse(BaseModel):
+    available: bool  # YOLO 模型是否可用
+    provider: str
+    is_simulated: bool
+    risk_level: RiskLevel  # 复用 mapping.compute_risk_level 聚合
+    hazards: list[DetectFrameHazard]
+    latency_ms: int | None = None
+    message: str = ""
+
+
 class SafetyAnalysisResponse(BaseModel):
     task_id: str
     project_id: str

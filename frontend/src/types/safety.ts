@@ -82,3 +82,24 @@ export interface SafetyTaskSummary {
   is_simulated: boolean
   created_at: string
 }
+
+export interface DetectFrameHazard {
+  id: string
+  hazard_type: string
+  hazard_name: string
+  description: string
+  confidence: number
+  risk_level: RiskLevel
+  bbox: number[] | null
+  source?: string | null
+}
+
+export interface DetectFrameResult {
+  available: boolean
+  provider: string
+  is_simulated: boolean
+  risk_level: RiskLevel
+  hazards: DetectFrameHazard[]
+  latency_ms: number | null
+  message: string
+}

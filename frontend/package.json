@@ -10,6 +10,7 @@
     "test:unit": "vitest",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
+    "typecheck": "vue-tsc --build",
     "format": "oxfmt src/"
   },
   "dependencies": {

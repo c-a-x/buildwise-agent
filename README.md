@@ -1,5 +1,7 @@
 # 筑智共生 · BuildWise AI Agent
 
+当前冻结版本：`v0.2.0-docker-ready`。
+
 BuildWise 是面向施工现场的安全运营工作台：上传现场图片后，五个离线 Agent 依次完成安全识别、规范检索、工单草稿、工友提醒和日报预览；正式工单必须经过人工确认，并按 `pending → in_progress → pending_review → closed` 流转。
 
 默认配置不需要外部 API Key，数据库使用真实 SQLite 文件，适合离线演示和自动化验收。前端不会直接连接数据库，而是通过 FastAPI → SQLAlchemy → SQLite 读取和写入数据。
@@ -100,6 +102,15 @@ docker compose up -d
 
 容器启动时会执行 Alembic 迁移和演示种子。访问 <http://localhost:8080>；前端 Nginx 将 `/api/` 和 `/storage/` 反向代理到后端，SQLite 数据保存在 Compose volume 中。
 
+保留 SQLite volume 的无缓存重建：
+
+```powershell
+docker compose down
+docker compose pull
+docker compose build --no-cache
+docker compose up -d
+```
+
 执行容器内迁移、种子和真实 HTTP 闭环验收：
 
 ```powershell
@@ -108,7 +119,7 @@ docker compose exec -T backend python -m app.db.seed
 backend\venv\Scripts\python.exe scripts\e2e_docker.py
 ```
 
-`scripts/e2e_docker.py` 默认访问 `http://localhost:8000/api/v1`，覆盖登录、项目列表、图片上传、五 Agent、工单确认与状态流转、日报、知识检索和 `normal` 场景；上传文件通过 `http://localhost:8080/storage/` 再验证一次 Nginx 代理。慢速或离线构建会优先使用 `frontend/.npm-cache-slim` 和 `frontend/.docker-native` 中的本地构建缓存，缺失时回退到配置的 npm registry。
+`scripts/e2e_docker.py` 默认访问 `http://localhost:8000/api/v1`，覆盖登录、项目列表、图片上传、五 Agent、工单确认与状态流转、日报、知识检索和 `normal` 场景；上传文件通过 `http://localhost:8080/storage/` 再验证一次 Nginx 代理。前端镜像使用 Node 22 Alpine 构建，npm 源可通过 `NPM_REGISTRY` build arg 覆盖；项目不依赖项目目录内的 npm 或原生构建缓存，`node_modules`、`dist`、虚拟环境和运行时目录均不会进入 Git 或 Docker 构建上下文。
 
 停止并删除容器（保留 volume）：
 
@@ -200,6 +211,12 @@ npm run build
 
 先恢复 `VISION_PROVIDER=mock`、`RETRIEVAL_PROVIDER=local_keyword`、`TEXT_PROVIDER=template` 验证离线闭环。切换真实 Provider 时逐项检查模型路径、Chroma 目录和三个 LLM 配置，接口错误码会指出缺失配置。
 
+### 已知构建和运行提示
+
+- `glob@10.5.0` 是 `@vue/test-utils → js-beautify` 带入的开发依赖，当前不进入生产镜像且不影响运行时；待上游依赖链提供兼容升级后再处理，不在此处强制覆盖跨主版本依赖。
+- Nginx 的 epoll、worker 启动和优雅退出 notice 属于容器生命周期日志，不是应用错误。
+- Node 22 已满足前端锁定的 Vite、Rolldown、OxFMT 和原生插件引擎要求；干净构建不应出现 Node 20 的 EBADENGINE 或 WASI 实验性提示。
+
 ### 图片无法上传或没有检测图
 
 只支持 JPEG、PNG、WEBP，大小上限由 `MAX_UPLOAD_MB` 控制。确认 `backend/storage/uploads` 和 `backend/storage/annotated` 可写；检测图是离线演示的标注副本，真实 Provider 仍需自行实现模型标注输出。
@@ -222,3 +239,12 @@ npm run build
 - 日报核心数字来自 SQL 聚合，日报文案可由模板或真实文本 Provider 生成；
 - 质量和绿色施工提供正式页面、状态接口和数据结构，尚未接入真实巡检或碳排数据源；
 - 生产环境仍需更换 `SECRET_KEY`、使用 PostgreSQL/对象存储、限制 CORS、启用 HTTPS、集中日志和速率限制。
+
+## 后续路线
+
+- 接入经验证的 Ultralytics/YOLO 视觉模型和真实标注输出；
+- 接入 Chroma 向量检索与可追溯的规范知识导入；
+- 接入 OpenAI-compatible 文本 Provider、语音提醒和权限审计；
+- 为 `QualityAgent` 接入真实质量巡检数据源；
+- 为 `GreenAgent` 接入真实材料和碳排数据源；
+- 面向生产环境迁移 PostgreSQL、对象存储、HTTPS、集中日志和速率限制。

@@ -4,3 +4,5 @@ dist
 .git
 .vscode
 .npm-cache
+.npm-cache-slim
+.docker-native

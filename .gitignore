@@ -26,12 +26,9 @@ backend/*.db
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
-frontend/.npm-cache/*
-!frontend/.npm-cache/.gitkeep
-frontend/.npm-cache-slim/*
-!frontend/.npm-cache-slim/.gitkeep
-frontend/.docker-native/*
-!frontend/.docker-native/.gitkeep
+frontend/.npm-cache/
+frontend/.npm-cache-slim/
+frontend/.docker-native/
 npm-debug.log*
 
 # Local environment

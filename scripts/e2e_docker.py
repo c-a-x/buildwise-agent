@@ -91,6 +91,9 @@ def main() -> None:
 
         safety_headers = login(client, "safety")
         manager_headers = login(client, "manager")
+        current_user = expect_object(client.get(f"{API_URL}/auth/me", headers=safety_headers), 200, "current user")
+        if value_as_string(current_user, "username", "current user") != "safety":
+            raise RuntimeError(f"current user is incorrect: {current_user}")
         projects = expect_list(client.get(f"{API_URL}/projects", headers=safety_headers), 200, "list projects")
         project_ids = [item.get("id") for item in projects if isinstance(item, dict)]
         if "PRJ-001" not in project_ids:

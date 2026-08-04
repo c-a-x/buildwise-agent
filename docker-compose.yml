@@ -9,11 +9,15 @@ services:
       ANNOTATED_DIR: storage/annotated
       REPORTS_DIR: storage/reports
       KNOWLEDGE_JSON_PATH: data_demo/standards/safety_standards.json
+      RETRIEVAL_PROVIDER: ${RETRIEVAL_PROVIDER:-local_keyword}
+      CHROMA_DIR: ${CHROMA_DIR:-storage/chroma}
+      CHROMA_MIN_SCORE: ${CHROMA_MIN_SCORE:-0.42}
       CORS_ORIGINS: http://localhost:8080
     ports:
       - "8000:8000"
     volumes:
       - buildwise-storage:/app/storage
+      - buildwise-chroma:/app/storage/chroma
 
   frontend:
     build:
@@ -27,3 +31,4 @@ services:
 
 volumes:
   buildwise-storage:
+  buildwise-chroma:

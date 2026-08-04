@@ -32,7 +32,10 @@
 | POST | `/api/v1/reports/daily/generate` | 生成日报 |
 | GET | `/api/v1/reports/daily` | 日报历史 |
 | POST | `/api/v1/worker-care/messages` | 工人关怀消息 |
+| GET | `/api/v1/knowledge/documents` | 已导入规范文档/条款 |
 | GET | `/api/v1/knowledge/search` | 规范知识检索 |
+| GET | `/api/v1/knowledge/index/status` | Provider、索引状态、文档数和条款数 |
+| POST | `/api/v1/knowledge/reindex` | 按当前知识源重建 Chroma 索引 |
 | GET | `/api/v1/quality/status` | 质量模块占位状态 |
 | GET | `/api/v1/green/status` | 绿色模块占位状态 |
 | GET | `/api/v1/health` | 健康检查，包含 Provider 与 SQLite 连接状态 |
@@ -59,6 +62,12 @@
 - `demo_scenario`：可选的离线演示场景，如 `no_helmet`、`missing_guardrail`、`no_safety_vest`、`normal`。
 
 返回值包含 `risk_level`、`hazards`、`evidence`、`work_order_draft`、`worker_message`、`agent_trace` 和 `is_simulated`。
+
+## 规范知识检索
+
+`GET /api/v1/knowledge/search?q=安全帽` 的每条命中包含 `source`、`article`、`content`、`score` 和 `metadata`，并保留 `document_id`、标题、分类、版本和生效日期。没有充分依据时 `data` 为 `[]`。
+
+`GET /api/v1/knowledge/index/status` 返回当前 `provider`（`local_keyword` 或 `chroma`）、`indexed`、`document_count`、`clause_count` 和 Chroma collection 信息。`POST /api/v1/knowledge/reindex` 在 Chroma 模式下读取 `KNOWLEDGE_JSON_PATH` 并重建持久化投影；关键词模式保持 JSON 直读，不需要向量重建。
 
 ## 工单列表筛选
 

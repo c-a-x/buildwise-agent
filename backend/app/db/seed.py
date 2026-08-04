@@ -57,7 +57,9 @@ def seed_database() -> None:
         for item in documents:
             document_id = str(item.get("id", new_id("KNO")))
             if not db.get(KnowledgeDocument, document_id):
-                db.add(KnowledgeDocument(id=document_id, title=str(item.get("title", item.get("article", "安全条款"))), source=str(item.get("source", "项目安全制度")), version=str(item.get("version", "MVP")), category=str(item.get("category", "施工安全")), content=str(item.get("content", "")), metadata_json={"hazard_types": item.get("hazard_types", []), "keywords": item.get("keywords", [])}, status="active"))
+                metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+                metadata = {**metadata, "hazard_types": item.get("hazard_types", metadata.get("hazard_types", [])), "keywords": item.get("keywords", metadata.get("keywords", [])), "document_id": document_id}
+                db.add(KnowledgeDocument(id=document_id, title=str(item.get("title", item.get("article", "安全条款"))), source=str(item.get("source", "项目安全制度")), version=str(item.get("version", "MVP")), article=str(item.get("article", "")), category=str(item.get("category", "施工安全")), effective_date=str(item.get("effective_date")) if item.get("effective_date") else None, content=str(item.get("content", "")), metadata_json=metadata, status="active"))
         db.commit()
         print(f"Seed complete: {len(users)} users, project={project.code}, knowledge={len(documents)}")
     finally:

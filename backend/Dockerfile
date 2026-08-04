@@ -13,6 +13,7 @@ COPY backend/app ./app
 COPY backend/alembic.ini ./
 COPY backend/alembic ./alembic
 COPY data_demo ./data_demo
+COPY scripts/ingest_knowledge.py ./scripts/ingest_knowledge.py
 
 RUN if test -f /app/docker-wheels/.complete; then \
         pip install --no-cache-dir --no-index --find-links=/app/docker-wheels -r requirements-docker.txt; \

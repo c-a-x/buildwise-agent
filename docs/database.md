@@ -24,3 +24,6 @@ python -m app.db.seed
 
 当前首个迁移 `0001_initial` 由 ORM metadata 建立完整表结构，并保留 Alembic 版本控制入口。种子数据包含 4 个演示用户、1 个演示项目和 20 条安全规范文档。
 
+`knowledge_documents` 的条款字段包括 `id`（稳定 document_id）、`source`、`title`、`article`、`category`、`content`、`version`、`effective_date` 和 `metadata_json`。`0003_knowledge_clause_metadata` 为已有 SQLite 数据库补充 `article` 与 `effective_date`；`metadata_json` 保存风险类型、关键词以及原始 `document_id` 等来源信息。
+
+Chroma 是 SQLite 之外的持久化检索投影，默认目录为 `backend/storage/chroma`，collection 名称为 `buildwise-standards`。Docker 使用独立的 `buildwise-chroma` named volume，清空索引不会删除 SQLite 数据库。

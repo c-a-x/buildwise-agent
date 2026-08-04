@@ -52,6 +52,10 @@ class LocalKeywordRetrievalProvider:
                 pass
         return BUILTIN_STANDARDS
 
+    def stats(self) -> dict[str, int]:
+        document_ids = {str(item.get("document_id", item.get("id", ""))) for item in self._documents}
+        return {"document_count": len(document_ids), "clause_count": len(self._documents)}
+
     def search(self, query: str, filters: dict[str, str], top_k: int = 3) -> list[dict[str, object]]:
         normalized_query = query.lower()
         hazard_type = filters.get("hazard_type", "")
@@ -69,14 +73,25 @@ class LocalKeywordRetrievalProvider:
         scored.sort(key=lambda item: item[0], reverse=True)
         results: list[dict[str, object]] = []
         for score, document in scored[:top_k]:
+            hazard_types = [str(item) for item in document.get("hazard_types", [])]
+            keywords = [str(item) for item in document.get("keywords", [])]
+            metadata = document.get("metadata")
+            normalized_metadata = dict(metadata) if isinstance(metadata, dict) else {}
+            normalized_metadata.setdefault("hazard_types", hazard_types)
+            normalized_metadata.setdefault("keywords", keywords)
             results.append(
                 {
                     "id": str(document.get("id", "")),
+                    "document_id": str(document.get("document_id", document.get("id", ""))),
+                    "title": str(document.get("title", "")),
                     "source": str(document.get("source", "")),
                     "article": str(document.get("article", "")),
+                    "category": str(document.get("category", "")),
                     "content": str(document.get("content", "")),
+                    "version": str(document.get("version", "")),
+                    "effective_date": document.get("effective_date"),
                     "score": float(score),
-                    "metadata": {"category": str(document.get("category", ""))},
+                    "metadata": normalized_metadata,
                 }
             )
         return results

@@ -53,6 +53,7 @@ class Settings:
     vision_provider: str = os.getenv("VISION_PROVIDER", "mock")
     vision_model_path: str = os.getenv("VISION_MODEL_PATH", "")
     retrieval_provider: str = os.getenv("RETRIEVAL_PROVIDER", "local_keyword")
+    chroma_min_score: float = float(os.getenv("CHROMA_MIN_SCORE", "0.42"))
     text_provider: str = os.getenv("TEXT_PROVIDER", "template")
     llm_base_url: str = os.getenv("LLM_BASE_URL", "")
     llm_api_key: str = os.getenv("LLM_API_KEY", "")

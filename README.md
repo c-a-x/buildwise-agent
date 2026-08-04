@@ -4,7 +4,7 @@
 
 BuildWise 是面向施工现场的安全运营工作台：上传现场图片后，五个离线 Agent 依次完成安全识别、规范检索、工单草稿、工友提醒和日报预览；正式工单必须经过人工确认，并按 `pending → in_progress → pending_review → closed` 流转。
 
-默认配置不需要外部 API Key，数据库使用真实 SQLite 文件，适合离线演示和自动化验收。前端不会直接连接数据库，而是通过 FastAPI → SQLAlchemy → SQLite 读取和写入数据。
+默认配置不需要外部 API Key，数据库使用真实 SQLite 文件，适合离线演示和自动化验收。前端不会直接连接数据库，而是通过 FastAPI → SQLAlchemy → SQLite 读取和写入数据。规范检索默认使用本地关键词 Provider；Chroma 模式使用真实持久化向量 collection，但仍使用离线可重复 embedding，不依赖外部文本大模型。
 
 ## 环境要求
 
@@ -100,7 +100,7 @@ docker compose --progress plain build
 docker compose up -d
 ```
 
-容器启动时会执行 Alembic 迁移和演示种子。访问 <http://localhost:8080>；前端 Nginx 将 `/api/` 和 `/storage/` 反向代理到后端，SQLite 数据保存在 Compose volume 中。
+容器启动时会执行 Alembic 迁移和演示种子。访问 <http://localhost:8080>；前端 Nginx 将 `/api/` 和 `/storage/` 反向代理到后端，SQLite 数据保存在 `buildwise-storage`，Chroma 数据保存在独立的 `buildwise-chroma` Compose volume 中。
 
 保留 SQLite volume 的无缓存重建：
 
@@ -140,17 +140,55 @@ docker compose down -v
 ```env
 VISION_PROVIDER=mock
 RETRIEVAL_PROVIDER=local_keyword
+CHROMA_DIR=storage/chroma
+CHROMA_MIN_SCORE=0.42
 TEXT_PROVIDER=template
 ```
 
 默认模式不读取外部密钥，响应中的 `is_simulated` 会明确为 `true`。真实 Provider 需要人工准备并验证：
 
 - `VISION_PROVIDER=ultralytics`：设置 `VISION_MODEL_PATH`，并安装/许可对应 YOLO 模型依赖；
-- `RETRIEVAL_PROVIDER=chroma`：设置 `CHROMA_DIR`，准备 Chroma collection；
+- `RETRIEVAL_PROVIDER=chroma`：使用 `CHROMA_DIR` 下的真实持久化 Chroma collection；先按下方命令导入已授权条款；
 - `TEXT_PROVIDER=openai_compatible`：同时设置 `LLM_BASE_URL`、`LLM_API_KEY`、`LLM_MODEL`；
 - 未配置必需参数时接口返回明确的 `PROVIDER_NOT_CONFIGURED`，不会静默退回模拟结果。
 
 不要把真实 API Key 写入仓库、镜像或文档。真实模型的许可、网络、成本和生产密钥由部署方负责。
+
+## Chroma 规范知识库
+
+只导入来源明确且已获授权的规范文件；仓库不提供来源不明的国家标准文件，也不虚构标准编号或条款。支持三种输入：
+
+- JSON：根节点可以是条款数组，也可以是包含 `clauses`、`articles`、`documents` 或 `items` 的对象。每条建议提供 `id`/`document_id`、`source`、`title`、`article`、`category`、`content`、`version`、`effective_date` 和 `metadata`；旧版演示 JSON 的 `hazard_types`、`keywords` 也会保留；
+- PDF/DOCX：必须通过命令行提供已授权的 `--source`、`--title`、`--category`。正文必须包含显式条款标题（例如 `第12条`、`第4.3.1条`、`Article 12`）；没有条款号会拒绝导入，不会生成“全文”条款；
+- 条款正文、条款号和来源会一并保存，扩展 metadata 以 JSON 保留。
+
+本地导入命令（先执行 Alembic 迁移）：
+
+```powershell
+cd E:\cc项目\buildwise-agent
+backend\venv\Scripts\python.exe scripts\ingest_knowledge.py --input data_demo\standards\safety_standards.json
+backend\venv\Scripts\python.exe scripts\ingest_knowledge.py --input path\to\authorized.pdf --source "已授权来源" --title "文档标题" --category "施工安全" --version "2026" --effective-date 2026-01-01
+```
+
+重复运行会按稳定条款 ID 增量 upsert，并报告 `created`、`updated`、`skipped`、`deleted` 和条款总数。重建或清空后重建：
+
+```powershell
+backend\venv\Scripts\python.exe scripts\ingest_knowledge.py --rebuild
+backend\venv\Scripts\python.exe scripts\ingest_knowledge.py --clear --rebuild
+```
+
+切换 Provider：
+
+```powershell
+$env:RETRIEVAL_PROVIDER = "chroma"
+docker compose up -d --build
+docker compose exec -T backend python scripts/ingest_knowledge.py --input data_demo/standards/safety_standards.json --rebuild
+
+# 恢复默认离线关键词检索
+$env:RETRIEVAL_PROVIDER = "local_keyword"
+```
+
+索引状态可通过页面“规范知识库”查看，也可调用 `GET /api/v1/knowledge/index/status`。检索接口返回来源、条款、正文、相似度和 metadata；无命中返回空数组。`buildwise-chroma` volume 可以随容器重启保留索引；`docker compose down -v` 会删除它以及 SQLite volume，请仅在明确需要清理开发数据时使用。
 
 ## 主 Demo
 
@@ -233,7 +271,7 @@ npm run build
 
 ## 能力边界
 
-- 默认视觉识别、规范检索和文本生成均为本地模拟 Provider，响应显式标记 `is_simulated=true`；
+- 默认视觉识别和文本生成仍为本地模拟 Provider，响应显式标记 `is_simulated=true`；`RETRIEVAL_PROVIDER=local_keyword` 是离线关键词能力，`chroma` 是本轮接入的真实持久化向量检索投影；
 - 未命中本地规范时不编造条款，证据不足会提示人工补充；
 - AI 只能生成工单草稿，人工确认后才写入正式工单；
 - 日报核心数字来自 SQL 聚合，日报文案可由模板或真实文本 Provider 生成；
@@ -243,7 +281,6 @@ npm run build
 ## 后续路线
 
 - 接入经验证的 Ultralytics/YOLO 视觉模型和真实标注输出；
-- 接入 Chroma 向量检索与可追溯的规范知识导入；
 - 接入 OpenAI-compatible 文本 Provider、语音提醒和权限审计；
 - 为 `QualityAgent` 接入真实质量巡检数据源；
 - 为 `GreenAgent` 接入真实材料和碳排数据源；

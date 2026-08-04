@@ -194,6 +194,9 @@ def main() -> None:
         )
         if not knowledge:
             raise RuntimeError("knowledge search returned no result")
+        knowledge_status = expect_object(client.get(f"{API_URL}/knowledge/index/status", headers=safety_headers), 200, "knowledge index status")
+        if knowledge_status.get("provider") not in {"local_keyword", "chroma"} or knowledge_status.get("clause_count", 0) < 1:
+            raise RuntimeError(f"knowledge index status is incorrect: {knowledge_status}")
 
     print(f"Docker E2E passed: task_id={task_id} order_id={order_id} report_id={report_id}")
 

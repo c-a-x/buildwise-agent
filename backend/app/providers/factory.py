@@ -27,7 +27,10 @@ def build_retrieval_provider(settings: Settings) -> RetrievalProvider:
     if settings.retrieval_provider == "local_keyword":
         return LocalKeywordRetrievalProvider(settings.knowledge_json_path)
     if settings.retrieval_provider == "chroma":
-        return ChromaRetrievalProvider(settings.chroma_dir)
+        try:
+            return ChromaRetrievalProvider(settings.chroma_dir, min_score=settings.chroma_min_score)
+        except RuntimeError as exc:
+            raise AppError(str(exc), "PROVIDER_NOT_CONFIGURED", 500) from exc
     raise AppError("不支持的检索 Provider", "PROVIDER_NOT_SUPPORTED", 500)
 
 

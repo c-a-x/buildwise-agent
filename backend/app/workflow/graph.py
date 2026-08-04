@@ -38,7 +38,7 @@ class BuildWiseWorkflow:
         state["agent_trace"] = []
         result = self.graph.invoke(state)
         result["provider_info"] = self.provider_info
-        result["is_simulated"] = self.provider_info == {"vision": "mock", "retrieval": "local_keyword", "text": "template"}
+        result["is_simulated"] = self.provider_info["vision"] == "mock" or self.provider_info["text"] == "template"
         result["review_required"] = True
         return result
 

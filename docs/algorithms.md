@@ -26,7 +26,11 @@ MockVision 使用可重复的演示场景或文件名关键词：
 
 ## 规范检索
 
-默认 `LocalKeywordRetriever` 对 `data_demo/standards/safety_standards.json` 做轻量关键词匹配；没有命中时返回空证据，不生成虚构条款。后续可替换为 Chroma 或其他向量检索 Provider。
+`RETRIEVAL_PROVIDER=local_keyword` 时，`LocalKeywordRetrievalProvider` 对 `data_demo/standards/safety_standards.json` 做离线关键词匹配；没有命中时返回空证据，不生成虚构条款。
+
+`RETRIEVAL_PROVIDER=chroma` 时，规范先被解析为带有 `document_id`、来源、标题、条款号、分类、正文、版本、生效日期和扩展 metadata 的 `KnowledgeClause`，再写入持久化 `buildwise-standards` collection。Chroma 使用本地可重复的中文字符 2/3-gram embedding，不下载外部模型；检索首先由 Chroma 执行 cosine 向量查询，再用来源文本的确定性重排和风险过滤控制低置信度结果。返回内容始终来自原文，不让文本模型补写条款。
+
+JSON 可直接提供条款号；PDF/DOCX 只按显式的 `第12条`、`第4.3.1条`、`Article 12` 或数字层级标题切分。没有条款标题的文档会被拒绝，避免把全文伪装成不存在的条款。导入使用 `python scripts/ingest_knowledge.py`，重复条款按稳定 ID 增量 upsert，`--rebuild` 会重建 collection。
 
 ## 工单状态机
 
@@ -36,4 +40,3 @@ pending → in_progress → pending_review → closed
 ```
 
 安全员可推进到 `pending_review`，项目经理可关闭或取消。每次变化写入 `work_order_events`。
-

@@ -98,6 +98,14 @@ export function useRealtimeDetection() {
     }
   }
 
+  /** 切换视频源时清空上一源的检测结果，避免旧检测框残留；不打断检测循环。 */
+  function reset(): void {
+    lastResult.value = null
+    lastLatencyMs.value = null
+    framesAnalyzed.value = 0
+    error.value = ''
+  }
+
   onUnmounted(stop)
 
   return {
@@ -110,5 +118,6 @@ export function useRealtimeDetection() {
     lastLatencyMs,
     start,
     stop,
+    reset,
   }
 }

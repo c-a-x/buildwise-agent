@@ -42,6 +42,11 @@ function toggleRunning(): void {
   if (running.value) stop()
   else start()
 }
+
+// 视频源切换后清空上一源的检测结果，避免旧检测框残留在新画面上
+function onSourceChange(): void {
+  detection.reset()
+}
 </script>
 
 <template>
@@ -71,7 +76,7 @@ function toggleRunning(): void {
           <div><p class="section-kicker">VIDEO FEED</p><h3>现场视频流</h3></div>
           <span class="mono">1 帧/秒 · 仅本机分析</span>
         </div>
-        <RealtimeSourcePicker :frame-source="detection.frameSource" :hazards="liveHazards" :alarm-active="alarmActive" :analyzing="analyzing" :running="running" />
+        <RealtimeSourcePicker :frame-source="detection.frameSource" :hazards="liveHazards" :alarm-active="alarmActive" :analyzing="analyzing" :running="running" @source-change="onSourceChange" />
       </section>
 
       <aside class="card side-panel">

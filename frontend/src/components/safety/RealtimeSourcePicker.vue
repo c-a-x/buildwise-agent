@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /** 实时检测视频源：演示模式（循环示例图）/ 本机摄像头（getUserMedia）/ ESP32-CAM（MJPG 代理流）。 */
 
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { Ref } from 'vue'
 
 import AppIcon from '@/components/common/AppIcon.vue'
@@ -28,6 +28,14 @@ const cameraError = ref('')
 const cameraStream = ref<MediaStream | null>(null)
 const imageError = ref('')
 const videoEl = ref<HTMLVideoElement | null>(null)
+// 本机摄像头设备列表：getUserMedia 默认用系统"默认摄像头"（可能是 DroidCam 等虚拟设备），
+// 需 enumerateDevices + deviceId 显式选择电脑本体的 USB/内置摄像头。
+const cameraDevices = ref<MediaDeviceInfo[]>([])
+const selectedCameraId = ref('')
+
+const emit = defineEmits<{
+  (e: 'source-change'): void
+}>()
 
 const modes: { key: SourceMode; label: string; icon: 'spark' | 'camera' | 'shield' }[] = [
   { key: 'demo', label: '演示模式', icon: 'spark' },
@@ -63,7 +71,10 @@ function bindSource(el: unknown): void {
 }
 
 function bindVideoSource(el: unknown): void {
-  videoEl.value = (el as HTMLVideoElement | null) ?? null
+  const video = (el as HTMLVideoElement | null) ?? null
+  videoEl.value = video
+  // 本机摄像头也要纳入抓帧检测，否则 frameSource 残留上一源（演示图/空），画错框或干脆不检测
+  props.frameSource.value = video
   attachStream()
 }
 
@@ -71,9 +82,25 @@ function attachStream(): void {
   if (videoEl.value && cameraStream.value) videoEl.value.srcObject = cameraStream.value
 }
 
+async function refreshCameraDevices(): Promise<void> {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    cameraDevices.value = devices.filter((device) => device.kind === 'videoinput')
+  } catch {
+    cameraDevices.value = []
+  }
+}
+
+function deviceLabel(device: MediaDeviceInfo, index: number): string {
+  return device.label || `摄像头 ${index + 1}`
+}
+
 async function startCamera(): Promise<void> {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } } })
+    await refreshCameraDevices()
+    const constraints: MediaTrackConstraints = { width: { ideal: 1280 }, height: { ideal: 720 } }
+    if (selectedCameraId.value) constraints.deviceId = { exact: selectedCameraId.value }
+    const stream = await navigator.mediaDevices.getUserMedia({ video: constraints })
     cameraStream.value = stream
     attachStream()
   } catch (cause) {
@@ -83,6 +110,18 @@ async function startCamera(): Promise<void> {
         : '无法打开摄像头，请确认已连接 USB 摄像头且未被其他程序占用'
     mode.value = 'demo'
   }
+}
+
+async function selectCamera(deviceId: string): Promise<void> {
+  if (deviceId === selectedCameraId.value) return
+  selectedCameraId.value = deviceId
+  if (mode.value !== 'camera') return
+  stopCamera()
+  await startCamera()
+}
+
+function onCameraSelect(event: Event): void {
+  void selectCamera((event.target as HTMLSelectElement).value)
 }
 
 function stopCamera(): void {
@@ -104,6 +143,7 @@ function cycleDemo(): void {
 }
 
 watch(mode, (next) => {
+  emit('source-change') // 切换视频源：父组件需清空上一源的检测结果
   if (demoTimer !== null) {
     window.clearInterval(demoTimer)
     demoTimer = null
@@ -111,7 +151,13 @@ watch(mode, (next) => {
   if (next === 'demo') demoTimer = window.setInterval(cycleDemo, DEMO_INTERVAL_MS)
 })
 
+onMounted(() => {
+  // 摄像头插拔/系统默认设备变化时刷新设备列表
+  navigator.mediaDevices?.addEventListener('devicechange', refreshCameraDevices)
+})
+
 onUnmounted(() => {
+  navigator.mediaDevices?.removeEventListener('devicechange', refreshCameraDevices)
   if (demoTimer !== null) window.clearInterval(demoTimer)
   stopCamera()
 })
@@ -139,7 +185,16 @@ onUnmounted(() => {
       <div v-else-if="mode === 'esp32' && imageError" class="stage-note error"><AppIcon name="info" :size="14" />{{ imageError }}</div>
       <div v-else-if="mode === 'demo'" class="stage-note"><AppIcon name="spark" :size="14" />演示画面循环切换 · 当前：{{ demoName }}</div>
       <div v-else-if="mode === 'esp32'" class="stage-note"><AppIcon name="shield" :size="14" />经后端代理接入 {{ esp32Url.trim() || '未填写地址' }}</div>
-      <div v-else class="stage-note"><AppIcon name="camera" :size="14" />本机摄像头画面仅在本浏览器内分析，不上传存储</div>
+      <div v-else-if="mode === 'camera'" class="camera-field">
+        <div class="stage-note"><AppIcon name="camera" :size="14" />本机摄像头画面仅在本浏览器内分析，不上传存储</div>
+        <div v-if="cameraDevices.length > 1" class="camera-select">
+          <label for="camera-device">视频设备</label>
+          <select id="camera-device" :value="selectedCameraId" @change="onCameraSelect" aria-label="选择摄像头设备">
+            <option value="">默认摄像头</option>
+            <option v-for="(device, index) in cameraDevices" :key="device.deviceId" :value="device.deviceId">{{ deviceLabel(device, index) }}</option>
+          </select>
+        </div>
+      </div>
 
       <div v-if="mode === 'esp32'" class="esp32-field">
         <input v-model.trim="esp32Url" type="url" spellcheck="false" placeholder="http://192.168.1.100:81/stream" aria-label="ESP32-CAM MJPG 流地址" />
@@ -168,6 +223,11 @@ onUnmounted(() => {
 .stage-note .app-icon { flex: none; color: var(--blue); }
 .stage-note.error { color: var(--danger); }
 .stage-note.error .app-icon { color: var(--danger); }
+.camera-field { display: flex; flex-direction: column; gap: 8px; }
+.camera-select { display: flex; align-items: center; gap: 8px; }
+.camera-select label { flex: none; color: var(--muted); font-size: 11px; font-weight: 700; }
+.camera-select select { flex: 1; min-width: 0; height: 34px; border: 1px solid var(--line); border-radius: 8px; padding: 0 11px; color: var(--text); background: #fff; font-size: 12px; }
+.camera-select select:focus { outline: none; border-color: var(--blue); }
 .esp32-field { display: flex; align-items: center; gap: 8px; }
 .esp32-field input { flex: 1; min-width: 0; height: 34px; border: 1px solid var(--line); border-radius: 8px; padding: 0 11px; color: var(--text); background: #fff; font-size: 12px; font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; }
 .esp32-field input:focus { outline: none; border-color: var(--blue); }

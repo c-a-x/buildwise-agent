@@ -23,7 +23,9 @@ class ReportService:
             raise ForbiddenError("当前角色不能生成日报")
         if actor.role != "admin" and not self.db.query(ProjectMember).filter(ProjectMember.project_id == project_id, ProjectMember.user_id == actor.id).first():
             raise ForbiddenError("无权访问该项目")
-        start = datetime.combine(report_date, time.min, tzinfo=timezone.utc)
+        local_timezone = datetime.now().astimezone().tzinfo or timezone.utc
+        local_start = datetime.combine(report_date, time.min, tzinfo=local_timezone)
+        start = local_start.astimezone(timezone.utc)
         end = start + timedelta(days=1)
         incident_query = self.db.query(Incident).filter(Incident.project_id == project_id, Incident.created_at >= start, Incident.created_at < end)
         incident_total = incident_query.count()

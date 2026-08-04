@@ -18,7 +18,7 @@ from app.workflow.graph import build_workflow
 class SafetyService:
     def __init__(self, db: Session) -> None:
         self.db = db
-        self.workflow = build_workflow(settings.knowledge_json_path)
+        self.workflow = build_workflow(settings.knowledge_json_path, settings)
 
     def analyze(
         self,
@@ -112,6 +112,11 @@ class SafetyService:
             draft = state.get("work_order_draft")
             if isinstance(draft, dict) and incidents:
                 draft["incident_id"] = incidents[0].id
+            task.result_json = {
+                "work_order_draft": draft,
+                "worker_message": str(state.get("worker_message", "")),
+                "report_preview": str(state.get("report_preview", "")),
+            }
             task.risk_level = str(state.get("risk_level", "normal"))
             task.status = "completed"
             task.is_simulated = bool(state.get("is_simulated", True))
@@ -160,13 +165,14 @@ class SafetyService:
             raise NotFoundError("上传文件不存在", "UPLOAD_NOT_FOUND")
         incidents = self.db.query(Incident).filter(Incident.agent_run_id == task.id).all()
         evidence = self.db.query(IncidentEvidence).filter(IncidentEvidence.incident_id.in_([item.id for item in incidents])).all() if incidents else []
+        result_json = task.result_json if isinstance(task.result_json, dict) else {}
         state = {
             "risk_level": task.risk_level,
             "hazards": [self._hazard_dict(item) for item in incidents],
             "evidence": [self._evidence_dict(item) for item in evidence],
-            "work_order_draft": None,
-            "worker_message": "",
-            "report_preview": "",
+            "work_order_draft": result_json.get("work_order_draft"),
+            "worker_message": result_json.get("worker_message", ""),
+            "report_preview": result_json.get("report_preview", ""),
             "agent_trace": task.trace_json or [],
             "review_required": True,
             "is_simulated": task.is_simulated,

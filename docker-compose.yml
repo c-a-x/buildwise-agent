@@ -18,6 +18,8 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        VITE_API_BASE_URL: /api/v1
     depends_on:
       - backend
     ports:

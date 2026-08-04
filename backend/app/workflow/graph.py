@@ -1,61 +1,47 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from app.agents.rag_agent import RagAgent
 from app.agents.report_agent import ReportAgent
 from app.agents.safety_agent import SafetyAgent
 from app.agents.work_order_agent import WorkOrderAgent
 from app.agents.worker_care_agent import WorkerCareAgent
-from app.providers.retrieval.local_keyword import LocalKeywordRetrievalProvider
-from app.providers.text.template import TemplateTextProvider
-from app.providers.vision.mock import MockVisionProvider
+from app.core.config import Settings, settings as default_settings
+from app.providers.factory import build_retrieval_provider, build_text_provider, build_vision_provider
+from app.workflow.graph_builder import build_graph
 from app.workflow.state import WorkflowState
 
 
 class BuildWiseWorkflow:
-    """LangGraph-compatible business sequence implemented offline for the MVP."""
+    """Five deterministic business nodes compiled as a LangGraph state graph."""
 
-    def __init__(self, knowledge_path):
-        self.safety = SafetyAgent(MockVisionProvider())
-        self.rag = RagAgent(LocalKeywordRetrievalProvider(knowledge_path))
-        self.work_order = WorkOrderAgent()
-        self.worker_care = WorkerCareAgent(TemplateTextProvider())
-        self.report = ReportAgent(TemplateTextProvider())
+    def __init__(self, knowledge_path: Path, runtime_settings: Settings) -> None:
+        vision_provider = build_vision_provider(runtime_settings)
+        retrieval_provider = build_retrieval_provider(runtime_settings)
+        text_provider = build_text_provider(runtime_settings)
+        self.provider_info = {
+            "vision": getattr(vision_provider, "name", runtime_settings.vision_provider),
+            "retrieval": getattr(retrieval_provider, "name", runtime_settings.retrieval_provider),
+            "text": getattr(text_provider, "name", runtime_settings.text_provider),
+        }
+        self.graph = build_graph(
+            SafetyAgent(vision_provider),
+            RagAgent(retrieval_provider),
+            WorkOrderAgent(),
+            WorkerCareAgent(text_provider),
+            ReportAgent(text_provider),
+        )
 
     def run(self, initial_state: WorkflowState) -> WorkflowState:
-        state: WorkflowState = dict(initial_state)
+        state = dict(initial_state)
         state["agent_trace"] = []
-        safety_output = self.safety.run(state)
-        self._merge_output(state, safety_output)
-        if state.get("hazards"):
-            for agent in (self.rag, self.work_order, self.worker_care):
-                output = agent.run(state)
-                self._merge_output(state, output)
-        else:
-            state["evidence"] = []
-            state["work_order_draft"] = None
-            state["worker_message"] = ""
-            state["agent_trace"] = state.get("agent_trace", []) + [
-                {"agent": "RagAgent", "status": "skipped", "message": "未发现隐患，跳过规范检索"},
-                {"agent": "WorkOrderAgent", "status": "skipped", "message": "未发现隐患，跳过工单草稿"},
-                {"agent": "WorkerCareAgent", "status": "skipped", "message": "未发现隐患，跳过工友提醒"},
-            ]
-        report_output = self.report.run(state)
-        self._merge_output(state, report_output)
-        state["provider_info"] = {
-            "vision": "mock",
-            "retrieval": "local_keyword",
-            "text": "template",
-        }
-        state["is_simulated"] = True
-        state["review_required"] = True
-        return state
-
-    @staticmethod
-    def _merge_output(state: WorkflowState, output: dict[str, object]) -> None:
-        previous_trace = list(state.get("agent_trace", []))
-        state.update({key: value for key, value in output.items() if key != "agent_trace"})
-        state["agent_trace"] = previous_trace + list(output.get("agent_trace", []))
+        result = self.graph.invoke(state)
+        result["provider_info"] = self.provider_info
+        result["is_simulated"] = self.provider_info == {"vision": "mock", "retrieval": "local_keyword", "text": "template"}
+        result["review_required"] = True
+        return result
 
 
-def build_workflow(knowledge_path):
-    return BuildWiseWorkflow(knowledge_path)
+def build_workflow(knowledge_path: Path, runtime_settings: Settings | None = None) -> BuildWiseWorkflow:
+    return BuildWiseWorkflow(knowledge_path, runtime_settings or default_settings)

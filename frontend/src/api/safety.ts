@@ -24,4 +24,8 @@ export const safetyApi = {
     const response = await http.get<ApiEnvelope<SafetyTaskSummary[]>>('/safety/tasks', { params: projectId ? { project_id: projectId } : {} })
     return response.data.data
   },
+  async task(taskId: string): Promise<SafetyAnalysisResult> {
+    const response = await http.get<ApiEnvelope<SafetyAnalysisResult>>(`/safety/tasks/${taskId}`)
+    return response.data.data
+  },
 }

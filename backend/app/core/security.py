@@ -43,6 +43,7 @@ def create_access_token(subject: str, expires_minutes: int | None = None) -> str
     payload = {
         "sub": subject,
         "type": "access",
+        "jti": secrets.token_hex(12),
         "iat": now,
         "exp": now + 60 * (expires_minutes or settings.access_token_expire_minutes),
     }

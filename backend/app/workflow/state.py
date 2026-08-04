@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TypedDict
+import operator
+from typing import Annotated, TypedDict
 
 
 class WorkflowState(TypedDict, total=False):
@@ -19,7 +20,7 @@ class WorkflowState(TypedDict, total=False):
     work_order_draft: dict[str, object] | None
     worker_message: str
     report_preview: str
-    agent_trace: list[dict[str, object]]
+    agent_trace: Annotated[list[dict[str, object]], operator.add]
     review_required: bool
     is_simulated: bool
     provider_info: dict[str, str]

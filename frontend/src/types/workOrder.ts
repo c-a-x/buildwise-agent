@@ -32,4 +32,7 @@ export interface WorkOrder {
   created_at: string
   updated_at: string
   events: WorkOrderEvent[]
+  file_url: string | null
+  annotated_url: string | null
+  evidence: Array<{ id?: string; source: string; article: string; content: string; score?: number | null }>
 }

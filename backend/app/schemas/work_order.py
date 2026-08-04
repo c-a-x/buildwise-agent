@@ -55,3 +55,6 @@ class WorkOrderRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     events: list[WorkOrderEventRead] = []
+    file_url: str | None = None
+    annotated_url: str | None = None
+    evidence: list[dict[str, object]] = []

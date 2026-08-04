@@ -82,6 +82,7 @@ class AgentRun(Base):
     is_simulated = Column(Boolean, default=True, nullable=False)
     provider_info_json = Column(JSON, default=dict, nullable=False)
     trace_json = Column(JSON, default=list, nullable=False)
+    result_json = Column(JSON, default=dict, nullable=False)
     error_message = Column(Text, nullable=True)
     started_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     finished_at = Column(DateTime(timezone=True), nullable=True)

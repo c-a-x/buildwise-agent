@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import AppError, ForbiddenError, NotFoundError
-from app.models import AgentRun, AuditLog, Incident, Project, ProjectMember, User, WorkOrder, WorkOrderEvent
+from app.models import AgentRun, AuditLog, Incident, IncidentEvidence, Project, ProjectMember, Upload, User, WorkOrder, WorkOrderEvent
 from app.repositories.work_order_repository import WorkOrderRepository
 from app.schemas.work_order import WorkOrderCreate, WorkOrderStatusUpdate
 from app.utils.ids import new_id
@@ -73,7 +73,16 @@ class WorkOrderService:
         self.db.commit()
         return order
 
-    def list(self, actor: User, project_id: str | None = None, status: str | None = None, risk_level: str | None = None) -> list[WorkOrder]:
+    def list(
+        self,
+        actor: User,
+        project_id: str | None = None,
+        status: str | None = None,
+        risk_level: str | None = None,
+        assignee_user_id: str | None = None,
+        deadline_from: datetime | None = None,
+        deadline_to: datetime | None = None,
+    ) -> list[WorkOrder]:
         project_ids = self._accessible_project_ids(actor)
         query = self.db.query(WorkOrder)
         if project_id:
@@ -86,6 +95,12 @@ class WorkOrderService:
             query = query.filter(WorkOrder.status == status)
         if risk_level:
             query = query.filter(WorkOrder.risk_level == risk_level)
+        if assignee_user_id:
+            query = query.filter(WorkOrder.assignee_user_id == assignee_user_id)
+        if deadline_from:
+            query = query.filter(WorkOrder.deadline >= deadline_from)
+        if deadline_to:
+            query = query.filter(WorkOrder.deadline <= deadline_to)
         return query.order_by(WorkOrder.deadline.asc()).all()
 
     def get(self, order_id: str, actor: User) -> WorkOrder:
@@ -102,6 +117,8 @@ class WorkOrderService:
         allowed = VALID_TRANSITIONS.get(order.status, set())
         if request.status not in allowed:
             raise AppError(f"不允许从 {order.status} 流转到 {request.status}", "WORK_ORDER_INVALID_TRANSITION", 400)
+        if request.status == "closed" and not request.note.strip():
+            raise AppError("关闭工单必须填写复查备注", "WORK_ORDER_REVIEW_NOTE_REQUIRED", 400)
         old_status = order.status
         order.status = request.status
         if request.status == "closed":
@@ -113,6 +130,12 @@ class WorkOrderService:
 
     def events(self, order_id: str) -> list[WorkOrderEvent]:
         return self.db.query(WorkOrderEvent).filter(WorkOrderEvent.work_order_id == order_id).order_by(WorkOrderEvent.created_at.asc()).all()
+
+    def serialize(self, order: WorkOrder) -> dict[str, object]:
+        incident = self.db.get(Incident, order.incident_id)
+        upload = self.db.get(Upload, incident.upload_id) if incident else None
+        evidence = self.db.query(IncidentEvidence).filter(IncidentEvidence.incident_id == order.incident_id).all()
+        return work_order_dict(order, self.events(order.id), upload, evidence)
 
     def _resolve_assignee(self, project_id: str, assignee_user_id: str | None, actor: User) -> User:
         if assignee_user_id:
@@ -159,7 +182,12 @@ class WorkOrderService:
         return f"{prefix}发现{hazard_name}，{requirements[0]}，完成后请联系安全员复查。"
 
 
-def work_order_dict(order: WorkOrder, events: list[WorkOrderEvent]) -> dict[str, object]:
+def work_order_dict(order: WorkOrder, events: list[WorkOrderEvent], upload: Upload | None = None, evidence: list[IncidentEvidence] | None = None) -> dict[str, object]:
+    file_url = f"/storage/{upload.relative_path}" if upload else None
+    annotated_url = None
+    if upload and "." in upload.stored_name:
+        stem, suffix = upload.stored_name.rsplit(".", 1)
+        annotated_url = f"/storage/annotated/{stem}-annotated.{suffix}"
     return {
         "id": order.id,
         "project_id": order.project_id,
@@ -192,5 +220,17 @@ def work_order_dict(order: WorkOrder, events: list[WorkOrderEvent]) -> dict[str,
                 "created_at": event.created_at,
             }
             for event in events
+        ],
+        "file_url": file_url,
+        "annotated_url": annotated_url,
+        "evidence": [
+            {
+                "id": item.id,
+                "source": item.source,
+                "article": item.article,
+                "content": item.content,
+                "score": item.score,
+            }
+            for item in (evidence or [])
         ],
     }

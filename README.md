@@ -1,63 +1,164 @@
 # 筑智共生 · BuildWise AI Agent
 
-面向施工现场的安全运营工作台原型：通过图片分析串起风险识别、规范证据、人工确认工单、整改状态和日报统计。项目默认离线可运行，适合产品演示和后续接入真实模型。
+BuildWise 是面向施工现场的安全运营工作台：上传现场图片后，五个离线 Agent 依次完成安全识别、规范检索、工单草稿、工友提醒和日报预览；正式工单必须经过人工确认，并按 `pending → in_progress → pending_review → closed` 流转。
 
-## 快速启动
+默认配置不需要外部 API Key，数据库使用真实 SQLite 文件，适合离线演示和自动化验收。前端不会直接连接数据库，而是通过 FastAPI → SQLAlchemy → SQLite 读取和写入数据。
+
+## 环境要求
+
+- Python 3.11 或更高版本；
+- Node.js 22 或更高版本、npm；
+- Docker Engine 和 Docker Compose v2（仅 Docker 启动需要）；
+- Windows 使用 PowerShell 5+，Unix 使用 Bash。
+
+## 本地启动
 
 ### Windows PowerShell
 
+首次安装依赖并初始化数据库：
+
 ```powershell
 cd E:\cc项目\buildwise-agent
-python -m venv backend\venv
-backend\venv\Scripts\python.exe -m pip install -e "backend[dev]"
+py -3.11 -m venv backend\venv
+backend\venv\Scripts\python.exe -m pip install -e ".\backend[dev]"
 cd backend
 ..\backend\venv\Scripts\python.exe -m alembic upgrade head
 ..\backend\venv\Scripts\python.exe -m app.db.seed
 cd ..\frontend
-npm install
-npm run dev
+npm ci
 ```
 
-另开一个终端启动后端：
+分别启动后端和前端：
 
 ```powershell
 cd E:\cc项目\buildwise-agent\backend
 ..\backend\venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
 ```
 
-也可以运行 `powershell -ExecutionPolicy Bypass -File scripts\dev.ps1`，它会启动后端并以前台方式启动 Vite。
+```powershell
+cd E:\cc项目\buildwise-agent\frontend
+npm run dev -- --host 0.0.0.0
+```
 
-访问：
+也可以一键运行（会先执行迁移和种子，后端日志写入 `backend/storage/logs/dev-backend.log`）：
+
+```powershell
+cd E:\cc项目\buildwise-agent
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\dev.ps1
+```
+
+### macOS / Linux
+
+```bash
+cd /path/to/buildwise-agent
+python3.11 -m venv backend/venv
+backend/venv/bin/python -m pip install -e 'backend[dev]'
+(cd backend && ../backend/venv/bin/python -m alembic upgrade head && ../backend/venv/bin/python -m app.db.seed)
+cd frontend
+npm ci
+```
+
+分别启动：
+
+```bash
+(cd backend && ../backend/venv/bin/python -m uvicorn app.main:app --reload --port 8000)
+cd frontend && npm run dev -- --host 0.0.0.0
+```
+
+或运行一键脚本：
+
+```bash
+./scripts/dev.sh
+```
+
+本地地址：
 
 - 前端：<http://localhost:5173>
-- API 文档：<http://localhost:8000/docs>
-- 健康检查：<http://localhost:8000/health>
+- Swagger：<http://localhost:8000/docs>
+- 健康检查：<http://localhost:8000/api/v1/health>
 
-### Docker Compose
+## SQLite 数据库
 
-```powershell
-docker compose up --build
-```
+默认数据库文件为 `backend/storage/buildwise.db`，启动脚本会先执行 Alembic 迁移和种子，之后前端所有登录、项目、分析、工单和日报请求都通过后端读写该文件。`backend/tests/` 中的测试夹具使用内存 SQLite 以隔离测试，不代表开发运行时使用假数据库。
 
-访问 <http://localhost:8080>。
-
-## 验证命令
+检查当前真实数据库是否可读、种子数据是否存在以及前后端 API 是否能读到项目：
 
 ```powershell
-cd backend
-python -m pytest -q
-python -m alembic upgrade head
-
-cd ..\frontend
-npm run type-check
-npm run build
+cd E:\cc项目\buildwise-agent
+python scripts\verify_sqlite_live.py
 ```
 
-根目录也提供 `Makefile`、`scripts\seed_demo.py`、`scripts\ingest_knowledge.py` 和 `scripts\dev.ps1` / `scripts\dev.sh`。
+可以通过 `backend/.env` 的 `DATABASE_URL` 指向其他 SQLite 文件；相对 SQLite 路径会固定按 `backend/` 目录解析，不会随启动命令所在目录漂移。
 
-## 页面与路由
+## Docker Compose
 
-已实现的核心页面包括：登录、注册、找回密码、仪表盘、项目管理、安全分析、安全历史、工单中心、工单详情、工人关怀、日报中心、日报历史、质量管理占位、绿色施工占位、知识库、个人资料、系统设置，以及 403/404 错误页。
+```powershell
+docker compose config
+docker compose --progress plain build
+docker compose up -d
+```
+
+容器启动时会执行 Alembic 迁移和演示种子。访问 <http://localhost:8080>；前端 Nginx 将 `/api/` 和 `/storage/` 反向代理到后端，SQLite 数据保存在 Compose volume 中。
+
+执行容器内迁移、种子和真实 HTTP 闭环验收：
+
+```powershell
+docker compose exec -T backend alembic upgrade head
+docker compose exec -T backend python -m app.db.seed
+backend\venv\Scripts\python.exe scripts\e2e_docker.py
+```
+
+`scripts/e2e_docker.py` 默认访问 `http://localhost:8000/api/v1`，覆盖登录、项目列表、图片上传、五 Agent、工单确认与状态流转、日报、知识检索和 `normal` 场景；上传文件通过 `http://localhost:8080/storage/` 再验证一次 Nginx 代理。慢速或离线构建会优先使用 `frontend/.npm-cache-slim` 和 `frontend/.docker-native` 中的本地构建缓存，缺失时回退到配置的 npm registry。
+
+停止并删除容器（保留 volume）：
+
+```powershell
+docker compose down
+```
+
+如需连同 SQLite 数据卷一起清理（会删除容器数据）：
+
+```powershell
+docker compose down -v
+```
+
+## Provider 切换
+
+复制 `backend/.env.example` 为 `backend/.env`，默认离线配置如下：
+
+```env
+VISION_PROVIDER=mock
+RETRIEVAL_PROVIDER=local_keyword
+TEXT_PROVIDER=template
+```
+
+默认模式不读取外部密钥，响应中的 `is_simulated` 会明确为 `true`。真实 Provider 需要人工准备并验证：
+
+- `VISION_PROVIDER=ultralytics`：设置 `VISION_MODEL_PATH`，并安装/许可对应 YOLO 模型依赖；
+- `RETRIEVAL_PROVIDER=chroma`：设置 `CHROMA_DIR`，准备 Chroma collection；
+- `TEXT_PROVIDER=openai_compatible`：同时设置 `LLM_BASE_URL`、`LLM_API_KEY`、`LLM_MODEL`；
+- 未配置必需参数时接口返回明确的 `PROVIDER_NOT_CONFIGURED`，不会静默退回模拟结果。
+
+不要把真实 API Key 写入仓库、镜像或文档。真实模型的许可、网络、成本和生产密钥由部署方负责。
+
+## 主 Demo
+
+完整步骤见 [`docs/demo-script.md`](docs/demo-script.md)：
+
+1. 使用 `safety / BuildWise123!` 登录；
+2. 打开“安全分析”，选择演示项目和 `no_helmet` 场景，上传 `data_demo/images/safety_no_helmet.jpg`；
+3. 查看隐患、置信度、检测框、规范证据、五 Agent trace 和工单草稿；
+4. 点击“确认创建正式工单”；
+5. 在工单详情依次推进到“整改中”“待复查”，填写复查备注后关闭；
+6. 使用 `manager / BuildWise123!` 验证项目经理权限，并在“日报中心”刷新当天日报；
+7. 在“安全历史”打开任务链接，验证刷新后草稿、提醒和日报预览仍然存在。
+
+也可执行自动化验收：
+
+```powershell
+cd E:\cc项目\buildwise-agent
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test_runbooks.ps1
+```
 
 ## 演示账号
 
@@ -68,18 +169,56 @@ npm run build
 | `quality` | `BuildWise123!` | 质检员 |
 | `worker` | `BuildWise123!` | 工人 |
 
-## 能力边界
+## 验证命令
 
-- 默认视觉识别、规范检索和文本生成均为本地 Provider；返回数据会明确标记 `is_simulated=true`。
-- 真实视觉模型可通过 `backend/app/providers/vision/` 的接口替换；真实文本/向量 Provider 可通过对应目录接入。
-- 未命中本地规范时不编造条款。
-- AI 仅生成工单草稿，只有人工确认才会创建正式工单。
-- 质量和绿色施工当前提供正式页面、状态接口和数据结构，尚未接入真实巡检或碳排数据源。
+```powershell
+cd E:\cc项目\buildwise-agent\backend
+..\backend\venv\Scripts\python.exe -m pytest -q
+..\backend\venv\Scripts\python.exe -m alembic upgrade head
 
-## 目录
+cd ..\frontend
+npm run test:unit -- --run
+npm run type-check
+npm run build
+```
+
+## 常见问题
+
+### 8000 或 5173 端口被占用
+
+停止占用端口的进程，或分别将 Uvicorn 的 `--port` 和 Vite 的 `--host/--port` 改为未占用端口；同时更新 `frontend/.env` 的 `VITE_API_BASE_URL` 和后端 `CORS_ORIGINS`。
+
+### Alembic 迁移失败或数据库结构过旧
+
+确认命令在 `backend/` 目录执行，并使用项目虚拟环境：`..\backend\venv\Scripts\python.exe -m alembic upgrade head`。开发环境需要重建数据库时，先备份 `backend/storage/buildwise.db`，再按项目允许的方式清理后重新迁移和种子。
+
+### 浏览器提示 CORS
+
+检查 `backend/.env` 的 `CORS_ORIGINS` 是否包含实际前端 origin（例如 `http://localhost:5173`），修改后重启后端；Docker 模式应包含 `http://localhost:8080`。
+
+### Provider 配置错误
+
+先恢复 `VISION_PROVIDER=mock`、`RETRIEVAL_PROVIDER=local_keyword`、`TEXT_PROVIDER=template` 验证离线闭环。切换真实 Provider 时逐项检查模型路径、Chroma 目录和三个 LLM 配置，接口错误码会指出缺失配置。
+
+### 图片无法上传或没有检测图
+
+只支持 JPEG、PNG、WEBP，大小上限由 `MAX_UPLOAD_MB` 控制。确认 `backend/storage/uploads` 和 `backend/storage/annotated` 可写；检测图是离线演示的标注副本，真实 Provider 仍需自行实现模型标注输出。
+
+## 页面与目录
+
+页面和路由覆盖登录、注册、找回密码、仪表盘、项目管理、安全分析、安全历史、整改工单、工单详情、工友助手、日报及历史、质量占位、绿色占位、知识库、个人资料、系统设置，以及 403/404 页面。
 
 - `frontend/`：Vue 3 + TypeScript + Pinia + Vue Router；
-- `backend/`：FastAPI + SQLAlchemy + Alembic + pytest；
-- `data_demo/`：安全规范、音频说明、示例日报和材料数据；
-- `docs/`：规格、架构、API、数据库、算法和演示文档；
-- `design-system/buildwise-ai-agent/MASTER.md`：按 UI/UX 规范生成并持久化的设计系统。
+- `backend/`：FastAPI + Pydantic + SQLAlchemy + Alembic + LangGraph；
+- `data_demo/`：规范数据、演示图片、示例日报和材料数据；
+- `scripts/`：本地启动、种子、知识导入、演示图片和 runbook 校验；
+- `docs/`：产品、架构、API、数据库、算法、部署和演示文档。
+
+## 能力边界
+
+- 默认视觉识别、规范检索和文本生成均为本地模拟 Provider，响应显式标记 `is_simulated=true`；
+- 未命中本地规范时不编造条款，证据不足会提示人工补充；
+- AI 只能生成工单草稿，人工确认后才写入正式工单；
+- 日报核心数字来自 SQL 聚合，日报文案可由模板或真实文本 Provider 生成；
+- 质量和绿色施工提供正式页面、状态接口和数据结构，尚未接入真实巡检或碳排数据源；
+- 生产环境仍需更换 `SECRET_KEY`、使用 PostgreSQL/对象存储、限制 CORS、启用 HTTPS、集中日志和速率限制。

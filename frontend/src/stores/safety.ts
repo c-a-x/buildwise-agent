@@ -10,6 +10,7 @@ export const useSafetyStore = defineStore('safety', () => {
   const tasks = ref<SafetyTaskSummary[]>([])
   const analyzing = ref(false)
   const loadingTasks = ref(false)
+  const loadingTask = ref(false)
   const error = ref('')
 
   async function analyze(file: File, payload: SafetyAnalyzePayload): Promise<SafetyAnalysisResult> {
@@ -38,10 +39,24 @@ export const useSafetyStore = defineStore('safety', () => {
     }
   }
 
+  async function loadTask(taskId: string): Promise<SafetyAnalysisResult> {
+    loadingTask.value = true
+    error.value = ''
+    try {
+      currentResult.value = await safetyApi.task(taskId)
+      return currentResult.value
+    } catch (cause) {
+      error.value = getApiError(cause)
+      throw cause
+    } finally {
+      loadingTask.value = false
+    }
+  }
+
   function clearResult(): void {
     currentResult.value = null
     error.value = ''
   }
 
-  return { currentResult, tasks, analyzing, loadingTasks, error, analyze, loadTasks, clearResult }
+  return { currentResult, tasks, analyzing, loadingTasks, loadingTask, error, analyze, loadTasks, loadTask, clearResult }
 })

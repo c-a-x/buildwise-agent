@@ -36,3 +36,6 @@ npm-debug.log*
 *.local
 .DS_Store
 Thumbs.db
+
+# External reference projects (safety-scout / safehat_identify / Smart_Construction)
+_ext_src/

@@ -37,8 +37,13 @@ class BuildWiseWorkflow:
         state = dict(initial_state)
         state["agent_trace"] = []
         result = self.graph.invoke(state)
-        result["provider_info"] = self.provider_info
-        result["is_simulated"] = self.provider_info["vision"] == "mock" or self.provider_info["text"] == "template"
+        # 视觉节点(SafetyAgent)写入的是 provider 实际执行结果(如 safety_hybrid:yolo)，
+        # 以此为准；不再用静态 provider 名字粗判，避免真实检测被误标为模拟。
+        actual_vision = (result.get("provider_info") or {}).get("vision")
+        result["provider_info"] = dict(self.provider_info)
+        if actual_vision:
+            result["provider_info"]["vision"] = actual_vision
+        result["is_simulated"] = bool(result.get("is_simulated", True))
         result["review_required"] = True
         return result
 

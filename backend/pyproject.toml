@@ -26,6 +26,10 @@ dev = [
   "httpx2>=2.9,<3",
   "pytest>=8.0",
 ]
+vision = [
+  "ultralytics>=8.3",
+  "opencv-python>=4.10",
+]
 
 [tool.setuptools.packages.find]
 include = ["app*"]

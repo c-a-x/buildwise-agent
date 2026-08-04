@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+import os
+
+# 测试固定使用离线 mock 视觉，与开发者本地 .env 解耦（本地可能设为 safety_hybrid）
+os.environ.setdefault("VISION_PROVIDER", "mock")
+os.environ.setdefault("VISION_LLM_PROVIDER", "off")
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine

@@ -52,6 +52,14 @@ class Settings:
     max_upload_mb: int = int(os.getenv("MAX_UPLOAD_MB", "10"))
     vision_provider: str = os.getenv("VISION_PROVIDER", "mock")
     vision_model_path: str = os.getenv("VISION_MODEL_PATH", "")
+    yolo_model_path: Path = _path_from_env(
+        os.getenv("YOLO_MODEL_PATH", "storage/models/yolov8n.pt"),
+        "storage/models/yolov8n.pt",
+    )
+    yolo_conf_threshold: float = float(os.getenv("YOLO_CONF_THRESHOLD", "0.5"))
+    vision_llm_provider: str = os.getenv("VISION_LLM_PROVIDER", "off")  # claude_cli | doubao | off
+    vision_llm_claude_cmd: str = os.getenv("VISION_LLM_CLAUDE_CMD", "claude")
+    vision_llm_timeout: int = int(os.getenv("VISION_LLM_TIMEOUT", "300"))
     retrieval_provider: str = os.getenv("RETRIEVAL_PROVIDER", "local_keyword")
     chroma_min_score: float = float(os.getenv("CHROMA_MIN_SCORE", "0.42"))
     text_provider: str = os.getenv("TEXT_PROVIDER", "template")

@@ -9,6 +9,7 @@ from app.providers.text.base import TextProvider
 from app.providers.text.openai_compatible import OpenAICompatibleTextProvider
 from app.providers.text.template import TemplateTextProvider
 from app.providers.vision.base import VisionProvider
+from app.providers.vision.hybrid import SafetyHybridVisionProvider
 from app.providers.vision.mock import MockVisionProvider
 from app.providers.vision.ultralytics import UltralyticsVisionProvider
 
@@ -20,6 +21,8 @@ def build_vision_provider(settings: Settings) -> VisionProvider:
         if not settings.vision_model_path:
             raise AppError("请配置 VISION_MODEL_PATH", "PROVIDER_NOT_CONFIGURED", 500)
         return UltralyticsVisionProvider(settings.vision_model_path)
+    if settings.vision_provider == "safety_hybrid":
+        return SafetyHybridVisionProvider(settings)
     raise AppError("不支持的视觉 Provider", "PROVIDER_NOT_SUPPORTED", 500)
 
 

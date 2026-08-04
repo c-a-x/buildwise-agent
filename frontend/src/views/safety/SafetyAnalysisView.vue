@@ -39,6 +39,16 @@ const displayImage = computed(() => {
   if (previewUrl.value) return previewUrl.value
   return result.value ? `${assetBase}${result.value.file_url}` : ''
 })
+// 顶部状态徽标：有分析结果时展示实际视觉 Provider，未分析时保持离线说明
+const visionLabel = computed(() => {
+  if (!result.value) return 'Mock Provider 在线'
+  const vision = result.value.provider_info?.vision
+  if (!vision) return result.value.is_simulated ? 'AI 模拟结果' : '真实模型结果'
+  if (vision === 'mock') return 'Mock Provider 在线'
+  const short = vision.replace(/^safety_hybrid:?/, '').replace(/^safety_hybrid$/, 'yolo')
+  return `模型在线 · ${short || vision}`
+})
+const isOfflineSimulated = computed(() => !result.value || result.value.is_simulated)
 
 function selectProject(event: Event): void {
   projects.selectProject((event.target as HTMLSelectElement).value)
@@ -110,7 +120,7 @@ function confidence(value: number): string { return `${Math.round(value * 100)}%
 </script>
 
 <template>
-  <div><AppPageHeader eyebrow="SAFETY INTELLIGENCE" title="现场安全分析" description="上传施工现场图片，让五个离线 Agent 协同完成识别、检索、任务和日报预览。"><template #actions><span class="status-pill dark"><span class="status-dot online" />Mock Provider 在线</span></template></AppPageHeader>
+  <div><AppPageHeader eyebrow="SAFETY INTELLIGENCE" title="现场安全分析" description="上传施工现场图片，让五个离线 Agent 协同完成识别、检索、任务和日报预览。"><template #actions><span class="status-pill dark"><span class="status-dot online" />{{ visionLabel }}</span></template></AppPageHeader>
     <div class="safety-layout">
       <section class="card input-panel"><div class="card-head"><div><p class="section-kicker">01 · INPUT</p><h3>准备一次现场分析</h3></div><span class="mono">120s timeout</span></div><div class="form-grid">
         <div class="form-field"><label>当前项目</label><select :value="projects.currentProject?.id" @change="selectProject"><option v-for="project in projects.projects" :key="project.id" :value="project.id">{{ project.name }}</option></select></div>
@@ -120,7 +130,7 @@ function confidence(value: number): string { return `${Math.round(value * 100)}%
         <div class="form-field"><label for="demo-scenario">演示场景</label><select id="demo-scenario" v-model="demoScenario"><option value="no_helmet">未戴安全帽 · 高风险</option><option value="missing_guardrail">临边防护缺失 · 重大风险</option><option value="no_safety_vest">未穿安全背心 · 中风险</option><option value="normal">正常现场 · 无新增隐患</option></select><p class="helper-text">仅用于离线演示，结果会显式标记为模拟并需要人工复核。</p></div>
         <div v-if="localError || safety.error" class="alert alert-error" role="alert">{{ localError || safety.error }}</div>
         <button v-if="!historyMode || file" class="primary-button analyze-button button-block" type="button" :disabled="safety.analyzing || safety.loadingTask" @click="analyze"><AppIcon :name="safety.analyzing ? 'refresh' : 'spark'" :size="16" />{{ safety.analyzing ? 'Agent 正在协同分析…' : historyMode ? '使用新图片重新分析' : '开始安全分析' }}</button><div v-if="safety.analyzing" class="analysis-progress"><span /></div>
-      </div><div class="mode-note"><AppIcon name="info" :size="16" /><div><strong>当前为离线模拟模式</strong><span>SafetyAgent 使用本地规则；RagAgent 使用内置规范条目；不会调用付费模型。</span></div></div></section>
+      </div><div class="mode-note"><AppIcon name="info" :size="16" /><div><strong>{{ isOfflineSimulated ? '当前为离线模拟模式' : '当前使用真实检测模型' }}</strong><span>{{ isOfflineSimulated ? 'SafetyAgent 使用本地规则；RagAgent 使用内置规范条目；不会调用付费模型。' : 'SafetyAgent 使用 YOLO 目标检测识别现场人员与隐患；RagAgent 使用内置规范条目；LLM 未配置时自动降级，不调用付费模型。' }}</span></div></div></section>
       <div class="result-column">
         <AppState v-if="!result && !safety.analyzing" title="等待一次现场分析" description="右侧结果会完整展示风险、规范依据、AI 工单草稿、工友提醒和执行轨迹。"><template #default><div class="scanner-illustration" aria-hidden="true"><span /><i /><b /></div></template></AppState>
         <AppState v-else-if="safety.analyzing" type="loading" title="五个 Agent 正在协同工作" description="正在识别现场、检索规范并生成可人工复核的草稿。" />

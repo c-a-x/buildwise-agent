@@ -2,7 +2,7 @@
 
 当前冻结版本：`v0.2.0-docker-ready`。
 
-BuildWise 是面向施工现场的安全运营工作台：上传现场图片后，五个离线 Agent 依次完成安全识别、规范检索、工单草稿、工友提醒和日报预览；正式工单必须经过人工确认，并按 `pending → in_progress → pending_review → closed` 流转。
+BuildWise 是面向施工现场的安全运营工作台，覆盖**安全分析、实时监控、质量巡检、工友助手、绿色碳排核算、知识库问答与统计分析**：安全分析上传现场图片后，五个离线 Agent 依次完成安全识别、规范检索、工单草稿、工友提醒和日报预览；正式工单必须经过人工确认，并按 `pending → in_progress → pending_review → closed` 流转。
 
 默认配置不需要外部 API Key，数据库使用真实 SQLite 文件，适合离线演示和自动化验收。前端不会直接连接数据库，而是通过 FastAPI → SQLAlchemy → SQLite 读取和写入数据。规范检索默认使用本地关键词 Provider；Chroma 模式使用真实持久化向量 collection，但仍使用离线可重复 embedding，不依赖外部文本大模型。
 
@@ -411,13 +411,13 @@ npm run build
 - 绿色建造已接入碳排核算核心：GB/T 51366-2019 因子法计算 A1-A3/A4/A5 分阶段排放（演示因子 `verified=false` 时 `is_simulated=true`），绿色五 Agent 检测闭环和真实碳排数据源仍为后续阶段；
 - 工单列表展示负责人姓名（`assignee_name`），未指派时回退显示负责人 ID；
 - 知识库提供统一 RAG 问答（`POST /knowledge/chat`），默认离线拼装、LLM 可选且失败自动降级；
+- 工友助手回答来自本地模板（不替代安全员判断），语音输入优先浏览器 Web Speech（zh-CN）本地识别；未配置 ASR Provider 时后端 `/transcribe` 返回 `available=false` 而非报错；
 - 统计分析（碳排强度 z-score 对标、隐患/缺陷异常波动检测、0-100 风险评分）全部为纯 `statistics` 计算，不依赖 numpy/scipy/pandas；
 - 生产环境仍需更换 `SECRET_KEY`、使用 PostgreSQL/对象存储、限制 CORS、启用 HTTPS、集中日志和速率限制。
 
 ## 后续路线
 
-- 为视觉识别接入 LLM 隐患分析（豆包/Claude CLI），补齐 H1-H10 分级与规范条款引用；
-- 接入 OpenAI-compatible 文本 Provider、语音提醒和权限审计；
+- 接入语音提醒和权限审计；
 - 为 `QualityAgent` 接入真实质量巡检数据源；
 - 为 `GreenAgent` 接入真实材料和碳排数据源；
 - 面向生产环境迁移 PostgreSQL、对象存储、HTTPS、集中日志和速率限制。

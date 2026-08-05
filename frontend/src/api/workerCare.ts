@@ -1,12 +1,19 @@
 import http from './http'
 import type { ApiEnvelope } from '@/types/api'
 
+export interface WorkerCitation {
+  source: string
+  article?: string
+  title?: string
+}
+
 export interface WorkerMessage {
   id: string
   question: string
   answer: string
   answer_source: string
   is_simulated: boolean
+  citations?: WorkerCitation[]
   created_at: string
 }
 

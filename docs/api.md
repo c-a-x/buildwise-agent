@@ -31,7 +31,7 @@
 | POST | `/api/v1/work-orders/{id}/attachments` | 保存整改图片并关联工单事件 |
 | POST | `/api/v1/reports/daily/generate` | 生成日报 |
 | GET | `/api/v1/reports/daily` | 日报历史 |
-| POST | `/api/v1/worker-care/chat` | 工友助手问答（模板 Provider） |
+| POST | `/api/v1/worker-care/chat` | 工友助手问答（知识库 RAG 检索，未命中回退模板） |
 | POST | `/api/v1/worker-care/transcribe` | 语音转写（multipart；未配置 ASR 时 `available=false`） |
 | GET | `/api/v1/knowledge/documents` | 已导入规范文档/条款 |
 | GET | `/api/v1/knowledge/search` | 规范知识检索 |
@@ -91,6 +91,10 @@
 - `llm`：`{ used, model, error }`，未配置 LLM 或调用失败时 `used=false` 自动降级为离线检索拼装（`mode="rag_only"`）。
 
 传 `project_id` 时先校验项目访问权限，再追加近 7 天现场概况（隐患/缺陷计数按模块分、风险等级分布、未闭环整改工单数）。
+
+## 工友助手问答
+
+`POST /api/v1/worker-care/chat` 提交 `{ project_id, question }`。回答由知识库 RAG 检索生成：命中规范条款时把要求转成简短工友友好提醒并内嵌《来源·条款》（高风险项提示暂停作业），`answer_source="rag"`、`is_simulated=false`、附 `citations`（来源/条款/标题/相似度）；未命中或检索 Provider 不可用时回退本地模板，`answer_source="template"`、`is_simulated=true`、`citations=[]`。
 
 ## 语音转写
 

@@ -269,7 +269,7 @@ ALERT_WEBHOOK_URL=http://192.168.1.50/api/alert
 
 ## 工友助手（worker care）
 
-「工友助手」页（`/worker-care`）把专业整改要求转成尊重、简短、可执行的现场提醒，回答来自本地模板，不替代安全员判断。
+「工友助手」页（`/worker-care`）把专业整改要求转成尊重、简短、可执行的现场提醒，回答由规范知识库 RAG 检索生成（内嵌《来源·条款》，高风险项提示暂停作业），未命中时回退本地模板，不替代安全员判断。
 
 **语音输入（双通道）**：点击麦克风说话，优先使用浏览器 Web Speech（`SpeechRecognition`，zh-CN）本地识别，无需后端、无需配置；浏览器不支持时自动降级为 `MediaRecorder` 录音上传 `POST /api/v1/worker-care/transcribe` 转写。外设 USB 麦克风可在下拉中切换。
 
@@ -411,7 +411,7 @@ npm run build
 - 绿色建造已接入碳排核算核心：GB/T 51366-2019 因子法计算 A1-A3/A4/A5 分阶段排放（演示因子 `verified=false` 时 `is_simulated=true`），绿色五 Agent 检测闭环和真实碳排数据源仍为后续阶段；
 - 工单列表展示负责人姓名（`assignee_name`），未指派时回退显示负责人 ID；
 - 知识库提供统一 RAG 问答（`POST /knowledge/chat`），默认离线拼装、LLM 可选且失败自动降级；
-- 工友助手回答来自本地模板（不替代安全员判断），语音输入优先浏览器 Web Speech（zh-CN）本地识别；未配置 ASR Provider 时后端 `/transcribe` 返回 `available=false` 而非报错；
+- 工友助手回答由规范知识库 RAG 检索生成（内嵌《来源·条款》，未命中回退本地模板），语音输入优先浏览器 Web Speech（zh-CN）本地识别；未配置 ASR Provider 时后端 `/transcribe` 返回 `available=false` 而非报错；
 - 统计分析（碳排强度 z-score 对标、隐患/缺陷异常波动检测、0-100 风险评分）全部为纯 `statistics` 计算，不依赖 numpy/scipy/pandas；
 - 生产环境仍需更换 `SECRET_KEY`、使用 PostgreSQL/对象存储、限制 CORS、启用 HTTPS、集中日志和速率限制。
 

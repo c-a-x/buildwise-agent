@@ -7,6 +7,7 @@ export interface Hazard {
   description: string
   confidence: number
   risk_level: RiskLevel
+  risk_score?: number | null
   bbox: number[] | null
   review_required: boolean
   source?: string | null

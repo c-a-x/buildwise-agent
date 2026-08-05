@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.rules.risk_rules import compute_risk_score
+
 _RISK_ORDER: dict[str, int] = {
     "critical": 4,
     "high": 3,
@@ -63,6 +65,7 @@ def class_to_hazard(label: str, confidence: float, bbox: list[float]) -> dict[st
         "description": f"检测到 {label}（置信度 {confidence:.0%}）。",
         "confidence": round(float(confidence), 4),
         "risk_level": risk_level,
+        "risk_score": compute_risk_score(hazard_type, risk_level, confidence=float(confidence)),
         "bbox": [float(value) for value in bbox],
         "source": "yolo",
     }
@@ -87,6 +90,7 @@ def llm_finding_to_hazard(finding: dict[str, Any]) -> dict[str, Any]:
         "description": description,
         "confidence": round(float(finding.get("confidence") or 0.85), 4),
         "risk_level": _normalize_risk(finding.get("severity")),
+        "risk_score": compute_risk_score(hazard_type, _normalize_risk(finding.get("severity")), confidence=float(finding.get("confidence") or 0.85), is_major=bool(finding.get("is_major"))),
         "bbox": None,
         "source": "llm",
         "regulation": str(finding.get("regulation", "")).strip(),

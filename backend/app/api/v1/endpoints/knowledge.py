@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import get_current_user
+from app.api.dependencies import ensure_project_access, get_current_user
 from app.api.response import ok
 from app.db.session import get_db
 from app.models import User
-from app.schemas.knowledge import KnowledgeDocumentCreate, KnowledgeDocumentRead, KnowledgeSearchResult
+from app.schemas.knowledge import KnowledgeChatRequest, KnowledgeDocumentCreate, KnowledgeDocumentRead, KnowledgeSearchResult
 from app.services.knowledge_service import KnowledgeService, document_payload
 
 
@@ -40,3 +40,10 @@ def reindex(http_request: Request, user: User = Depends(get_current_user), db: S
 @router.get("/index/status")
 def index_status(http_request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return ok(KnowledgeService(db).index_status(), http_request)
+
+
+@router.post("/chat")
+def chat(request: KnowledgeChatRequest, http_request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if request.project_id:
+        ensure_project_access(request.project_id, user, db)
+    return ok(KnowledgeService(db).chat(question=request.question, project_id=request.project_id, use_llm=request.use_llm), http_request)

@@ -231,7 +231,13 @@ class CarbonAnalysis(Base):
     id = Column(String(64), primary_key=True, default=lambda: new_id("CAR"))
     project_id = Column(String(64), ForeignKey("projects.id"), nullable=False)
     source_upload_id = Column(String(64), ForeignKey("uploads.id"), nullable=True)
+    requested_by = Column(String(64), ForeignKey("users.id"), nullable=True)
+    area_m2 = Column(Float, nullable=True)
+    scope = Column(Text, default="", nullable=False)
     total_emission = Column(Float, nullable=True)
+    is_simulated = Column(Boolean, default=False, nullable=False)
+    report_preview = Column(Text, default="", nullable=False)
+    factor_version = Column(String(64), default="", nullable=False)
     result_json = Column(JSON, default=dict, nullable=False)
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 

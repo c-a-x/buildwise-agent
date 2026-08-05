@@ -13,7 +13,7 @@
 - `worker_messages`：工人关怀消息；
 - `knowledge_documents`：规范本地知识库（安全 + 质量独立知识源）；
 - `agent_runs` 的 `module` 列区分安全（`safety`）与质量（`quality`）任务，两者复用同一批表（`uploads`/`incidents`/`work_orders`）并互不串扰；
-- `audit_logs`：审计扩展实体。绿色模块（`carbon_analyses`）仍为占位，尚未建表。
+- `audit_logs`：审计扩展实体。绿色模块 `carbon_analyses` 已实现：每条核算存 `requested_by`（用户）、`area_m2`、`scope`、`total_emission`、`is_simulated`（演示因子标记）、`report_preview`、`factor_version`，条目与分阶段明细（stages/items/top_contributors/suggestions/factor_warnings）存 `result_json`，`source_upload_id` 保留 nullable 暂未使用。`0006_carbon_analysis_fields` 为已有 SQLite 数据库补充绿色核算列。
 
 ## 命令
 

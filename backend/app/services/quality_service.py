@@ -100,6 +100,7 @@ class QualityService:
                         "suggestion": hazard.get("suggestion"),
                         "is_major": hazard.get("is_major"),
                         "major_basis": hazard.get("major_basis"),
+                        "risk_score": hazard.get("risk_score"),
                     },
                     review_required=True,
                 )
@@ -219,6 +220,14 @@ class QualityService:
     @staticmethod
     def _hazard_dict(incident: Incident) -> dict[str, object]:
         metadata = incident.metadata_json if isinstance(incident.metadata_json, dict) else {}
+        risk_score = metadata.get("risk_score")
+        if risk_score is None:
+            # 兜底：mock 视觉不经过 quality_mapping.py，读回时按规则现算
+            from app.rules.risk_rules import compute_risk_score
+
+            risk_score = compute_risk_score(
+                incident.hazard_type, incident.risk_level, incident.confidence, bool(metadata.get("is_major"))
+            )
         return {
             "id": incident.id,
             "hazard_type": incident.hazard_type,
@@ -226,6 +235,7 @@ class QualityService:
             "description": incident.description,
             "confidence": incident.confidence,
             "risk_level": incident.risk_level,
+            "risk_score": risk_score,
             "bbox": incident.bbox_json,
             "review_required": incident.review_required,
             "source": metadata.get("source"),

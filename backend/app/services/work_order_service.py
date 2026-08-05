@@ -141,7 +141,8 @@ class WorkOrderService:
         incident = self.db.get(Incident, order.incident_id)
         upload = self.db.get(Upload, incident.upload_id) if incident else None
         evidence = self.db.query(IncidentEvidence).filter(IncidentEvidence.incident_id == order.incident_id).all()
-        return work_order_dict(order, self.events(order.id), upload, evidence)
+        assignee = self.db.get(User, order.assignee_user_id) if order.assignee_user_id else None
+        return work_order_dict(order, self.events(order.id), upload, evidence, assignee_name=assignee.real_name if assignee else None)
 
     def _resolve_assignee(self, project_id: str, assignee_user_id: str | None, actor: User) -> User:
         if assignee_user_id:
@@ -188,7 +189,7 @@ class WorkOrderService:
         return f"{prefix}发现{hazard_name}，{requirements[0]}，完成后请联系安全员复查。"
 
 
-def work_order_dict(order: WorkOrder, events: list[WorkOrderEvent], upload: Upload | None = None, evidence: list[IncidentEvidence] | None = None) -> dict[str, object]:
+def work_order_dict(order: WorkOrder, events: list[WorkOrderEvent], upload: Upload | None = None, evidence: list[IncidentEvidence] | None = None, assignee_name: str | None = None) -> dict[str, object]:
     file_url = f"/storage/{upload.relative_path}" if upload else None
     annotated_url = None
     if upload and "." in upload.stored_name:
@@ -204,6 +205,7 @@ def work_order_dict(order: WorkOrder, events: list[WorkOrderEvent], upload: Uplo
         "risk_level": order.risk_level,
         "location": order.location,
         "assignee_user_id": order.assignee_user_id,
+        "assignee_name": assignee_name,
         "created_by": order.created_by,
         "deadline": order.deadline,
         "status": order.status,

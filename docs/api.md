@@ -36,11 +36,19 @@
 | GET | `/api/v1/knowledge/search` | 规范知识检索 |
 | GET | `/api/v1/knowledge/index/status` | Provider、索引状态、文档数和条款数 |
 | POST | `/api/v1/knowledge/reindex` | 按当前知识源重建 Chroma 索引 |
+| POST | `/api/v1/knowledge/chat` | 统一 RAG 问答：规范条文 + 风险提示 + 现场概况（可选 LLM 总结） |
 | POST | `/api/v1/quality/analyze` | 质量巡检分析（上传图片 → 五 Agent 缺陷闭环） |
 | GET | `/api/v1/quality/tasks` | 质量任务列表 |
 | GET | `/api/v1/quality/tasks/{id}` | 质量任务详情 |
 | GET | `/api/v1/quality/status` | 质量模块状态 |
-| GET | `/api/v1/green/status` | 绿色模块占位状态 |
+| POST | `/api/v1/green/analyze` | 绿色碳排核算（JSON：材料/运输/能耗 → 分阶段排放） |
+| GET | `/api/v1/green/analyses` | 碳排核算历史（可按 `project_id` 过滤） |
+| GET | `/api/v1/green/analyses/{id}` | 碳排核算详情 |
+| GET | `/api/v1/green/analyses/{id}/report` | 下载碳排核算 Word 报告（`.docx`，附 `Content-Disposition`） |
+| GET | `/api/v1/green/benchmark` | 同类项目碳排强度 z-score 对标（可按 `project_id` 高亮当前项目） |
+| GET | `/api/v1/green/factors` | 排放因子库（含 verified 标记） |
+| GET | `/api/v1/green/status` | 绿色模块状态 |
+| GET | `/api/v1/stats/anomalies` | 隐患/缺陷历史 z-score 异常波动检测（safety/quality） |
 | GET | `/api/v1/health` | 健康检查，包含 Provider 与 SQLite 连接状态 |
 
 健康检查的 `data.database` 会由后端执行真实 `SELECT 1` 得出：
@@ -72,6 +80,37 @@
 
 `GET /api/v1/knowledge/index/status` 返回当前 `provider`（`local_keyword` 或 `chroma`）、`indexed`、`document_count`、`clause_count` 和 Chroma collection 信息。`POST /api/v1/knowledge/reindex` 在 Chroma 模式下读取 `KNOWLEDGE_JSON_PATH` 并重建持久化投影；关键词模式保持 JSON 直读，不需要向量重建。
 
+### 统一 RAG 问答
+
+`POST /api/v1/knowledge/chat` 提交 `{ "question": "...", "project_id": null, "use_llm": null }`，返回四层结构：
+
+- `answer`：按「【一、规范与标准条文】」「【二、相关风险提示】」「【三、现场概况】」分段拼装；无命中时给兜底文案，不编造条款；
+- `citations`：命中的条款来源（`source`/`article`/`title`/`score`）；
+- `retrieval`：`{ clauses: {ready, count}, risk_tip: {included, hazard_types}, site: {included, project_id} }`；
+- `llm`：`{ used, model, error }`，未配置 LLM 或调用失败时 `used=false` 自动降级为离线检索拼装（`mode="rag_only"`）。
+
+传 `project_id` 时先校验项目访问权限，再追加近 7 天现场概况（隐患/缺陷计数按模块分、风险等级分布、未闭环整改工单数）。
+
 ## 工单列表筛选
 
-`GET /api/v1/work-orders` 支持 `project_id`、`status`、`risk_level`、`assignee_user_id`、`deadline_from` 和 `deadline_to` 查询参数。日期参数使用 ISO 8601 时间；详情响应会返回 `file_url`、`annotated_url` 和 `evidence`。
+`GET /api/v1/work-orders` 支持 `project_id`、`status`、`risk_level`、`assignee_user_id`、`deadline_from` 和 `deadline_to` 查询参数。日期参数使用 ISO 8601 时间；详情响应会返回 `file_url`、`annotated_url` 和 `evidence`。每条工单带 `assignee_name`（负责人姓名，来自 `real_name`；未指派或查不到时为 `null`）。
+
+## 绿色碳排对标
+
+`GET /api/v1/green/benchmark?project_id=` 对用户可见项目集合做碳排强度（tCO2e/m²）z-score 对标，纯 `statistics` 计算，不引入 numpy：
+
+- 每个项目取**最新一条有 `area_m2` 的核算**算强度；样本不足 2 个或标准差为 0 时返回 `available=false` + 中文 `reason`；
+- 返回 `count`、`mean`、`std`、按强度升序的 `items`（每项含 `rank`、`z`、`better_than_pct`），`z` 为负表示优于均值；`current` 高亮当前项目；
+- `better_than_pct` = 严格劣于当前项目的占比 × 100。
+
+## 异常波动检测
+
+`GET /api/v1/stats/anomalies?project_id=&module=safety&days=30&z_threshold=2.5` 对窗口内按天计数的隐患/缺陷数量做 z-score 检测（纯 `statistics`）：
+
+- `module` 仅接受 `safety`/`quality`，按 `metadata_json.module` Python 侧分拣（`quality` 需 `module=="quality"`；`safety` 兼容无 module 键的历史行）；`days` 限制在 [3, 90]，`z_threshold` 限制在 (0, 10]；
+- 补齐窗口内空日期为 0；空数据返回 `available=false`；标准差为 0 时所有天均非异常；
+- 返回 `{available, project_id, module, days, z_threshold, total_days, mean, std, anomaly_days, ratio, samples:[{date, count, z, anomaly}]}`。
+
+## 风险评分
+
+`HazardRead`/`QualityHazardRead` 增加可选字段 `risk_score`（0-100 整数）。视觉映射（`mapping.py`/`quality_mapping.py`）在生成隐患时计算并写入；历史数据缺 `risk_score` 时后端读取接口会用 `rules/risk_rules.py` 的 `compute_risk_score` 按隐患类型基准分、风险等级、置信度现算兜底，因此接口返回始终非空。

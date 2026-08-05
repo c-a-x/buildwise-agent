@@ -45,3 +45,19 @@ class KnowledgeSearchResult(BaseModel):
     effective_date: str | None = None
     score: float
     metadata: dict[str, object] = Field(default_factory=dict)
+
+
+class KnowledgeChatRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=500)
+    project_id: str | None = None
+    use_llm: bool | None = None
+
+
+class KnowledgeChatResult(BaseModel):
+    question: str
+    mode: str  # rag_only | rag_llm
+    description: str
+    answer: str
+    citations: list[dict[str, object]]
+    retrieval: dict[str, object]
+    llm: dict[str, object]

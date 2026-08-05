@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api.v1.endpoints import auth, dashboard, green, health, knowledge, modules, projects, quality, reports, safety, users, work_orders, worker_care
+from app.api.v1.endpoints import auth, dashboard, green, health, knowledge, modules, projects, quality, reports, safety, stats, users, work_orders, worker_care
 from app.core.config import settings
 from app.core.exceptions import AppError
 from app.core.logging import configure_logging
@@ -56,6 +56,6 @@ def root():
     return {"name": settings.app_name, "docs": "/docs", "api_prefix": settings.api_prefix}
 
 
-for endpoint in (health, modules, auth, users, projects, dashboard, safety, work_orders, worker_care, reports, knowledge, quality, green):
+for endpoint in (health, modules, auth, users, projects, dashboard, safety, work_orders, worker_care, reports, knowledge, quality, green, stats):
     app.include_router(endpoint.router, prefix=settings.api_prefix)
 app.mount("/storage", StaticFiles(directory=str(settings.storage_dir)), name="storage")

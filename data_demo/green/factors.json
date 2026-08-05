@@ -1,0 +1,26 @@
+{
+  "version": "0.1.0",
+  "updated_at": "2026-08-05",
+  "note": "排放因子库。verified=true 表示数值有公开权威来源可直接采用；verified=false 表示演示推算值，需按标准原文或供应商经第三方核证的碳足迹数据替换。修改本文件后需重启后端生效。",
+  "materials": [
+    {"code": "CONCRETE_C30", "name": "C30商品混凝土", "unit": "m3", "factor": 0.295, "factor_unit": "tCO2e/m3", "source": "GB/T 51366-2019 附录D 建材碳排放因子（由标准应用实例推算，需核对原文或供应商碳足迹数据）", "year": 2019, "verified": false, "note": "按 2.95kgCO2e/kg 水泥胶材为主的 C30 配合比推算"},
+    {"code": "CONCRETE_C40", "name": "C40商品混凝土", "unit": "m3", "factor": 0.368, "factor_unit": "tCO2e/m3", "source": "GB/T 51366-2019 附录D（推算值，需核对）", "year": 2019, "verified": false, "note": "强度等级越高胶材用量越大"},
+    {"code": "REBAR_HOT_ROLLED", "name": "热轧钢筋", "unit": "t", "factor": 2.34, "factor_unit": "tCO2e/t", "source": "GB/T 51366-2019 附录D（由标准应用实例推算，需核对原文或供应商碳足迹数据）", "year": 2019, "verified": false},
+    {"code": "STEEL_SECTION", "name": "热轧型钢", "unit": "t", "factor": 2.21, "factor_unit": "tCO2e/t", "source": "GB/T 51366-2019 附录D（推算值，需核对）", "year": 2019, "verified": false},
+    {"code": "CEMENT_PO425", "name": "普通硅酸盐水泥 P·O 42.5", "unit": "t", "factor": 0.735, "factor_unit": "tCO2e/t", "source": "GB/T 51366-2019 附录D（推算值，需核对）", "year": 2019, "verified": false},
+    {"code": "SAND", "name": "天然砂", "unit": "t", "factor": 0.0032, "factor_unit": "tCO2e/t", "source": "GB/T 51366-2019 附录D（推算值，需核对）", "year": 2019, "verified": false},
+    {"code": "GRAVEL", "name": "碎石", "unit": "t", "factor": 0.004, "factor_unit": "tCO2e/t", "source": "GB/T 51366-2019 附录D（推算值，需核对）", "year": 2019, "verified": false},
+    {"code": "CLAY_BRICK", "name": "烧结普通砖", "unit": "千块", "factor": 0.5, "factor_unit": "tCO2e/千块", "source": "GB/T 51366-2019 附录D（推算值，需核对）", "year": 2019, "verified": false},
+    {"code": "FLOAT_GLASS", "name": "平板玻璃", "unit": "t", "factor": 0.98, "factor_unit": "tCO2e/t", "source": "GB/T 51366-2019 附录D（推算值，需核对）", "year": 2019, "verified": false}
+  ],
+  "energy": [
+    {"code": "GRID_ELEC", "name": "外购电力（全国电网平均）", "unit": "kWh", "factor": 0.0005703, "factor_unit": "tCO2/kWh", "source": "生态环境部《2022年度全国电网平均二氧化碳排放因子》0.5703 tCO2/MWh（2023-02 发布）", "year": 2022, "verified": true, "note": "范围二间接排放；年度因子发布后可按最新值替换"},
+    {"code": "DIESEL", "name": "柴油", "unit": "L", "factor": 0.0026, "factor_unit": "tCO2/L", "source": "GB/T 51366-2019 附录A 主要能源碳排放因子（推算值，需核对）", "year": 2019, "verified": false},
+    {"code": "GASOLINE", "name": "汽油", "unit": "L", "factor": 0.0023, "factor_unit": "tCO2/L", "source": "GB/T 51366-2019 附录A（推算值，需核对）", "year": 2019, "verified": false},
+    {"code": "NATURAL_GAS", "name": "天然气", "unit": "m3", "factor": 0.0022, "factor_unit": "tCO2/m3", "source": "GB/T 51366-2019 附录A（推算值，需核对）", "year": 2019, "verified": false}
+  ],
+  "transport": [
+    {"code": "TRUCK_46T_DIESEL", "name": "重型柴油货车（载重46t）", "unit": "t·km", "factor": 0.000057, "factor_unit": "tCO2e/(t·km)", "source": "GB/T 51366-2019 附录E 建材运输碳排放因子（0.057 kgCO2e/(t·km)，需核对原文）", "year": 2019, "verified": false, "note": "空载率按标准默认值"},
+    {"code": "TRUCK_20T_DIESEL", "name": "柴油货车（载重20t）", "unit": "t·km", "factor": 0.000102, "factor_unit": "tCO2e/(t·km)", "source": "GB/T 51366-2019 附录E（推算值，需核对）", "year": 2019, "verified": false, "note": "载重越小单位周转碳排放越高"}
+  ]
+}

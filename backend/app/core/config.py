@@ -80,6 +80,10 @@ class Settings:
         os.getenv("QUALITY_KNOWLEDGE_JSON_PATH", "../data_demo/standards/quality_standards.json"),
         "../data_demo/standards/quality_standards.json",
     )
+    green_factors_path: Path = _path_from_env(
+        os.getenv("GREEN_FACTORS_PATH", "../data_demo/green/factors.json"),
+        "../data_demo/green/factors.json",
+    )
     cors_origins: tuple[str, ...] = tuple(
         origin.strip()
         for origin in os.getenv(

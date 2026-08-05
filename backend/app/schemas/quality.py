@@ -14,6 +14,7 @@ class QualityHazardRead(BaseModel):
     description: str
     confidence: float
     risk_level: RiskLevel
+    risk_score: int | None = None
     bbox: list[float] | None = None
     review_required: bool = True
     source: str | None = None

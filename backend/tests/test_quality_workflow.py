@@ -68,6 +68,24 @@ def test_normal_scenario_skips_downstream_agents(client, monkeypatch):
     assert [item["status"] for item in data["agent_trace"]] == ["completed", "skipped", "skipped", "skipped", "completed"]
 
 
+def test_crack_defect_carries_risk_score(client, monkeypatch):
+    from app.rules.risk_rules import compute_risk_score
+
+    _force_quality_mock(monkeypatch)
+    headers = login(client, "quality")
+    response = client.post(
+        "/api/v1/quality/analyze",
+        headers=headers,
+        files={"image": ("wall.jpg", b"demo", "image/jpeg")},
+        data={"project_id": "PRJ-001", "location": "2号楼东侧外墙", "work_type": "外墙抹灰", "demo_scenario": "crack"},
+    )
+    assert response.status_code == 200
+    defect = response.json()["data"]["defects"][0]
+    # crack 不在 RISK_RULES，按 risk_level=medium 兜底 base 60 × 置信度 0.95 → 59
+    assert defect["risk_score"] == compute_risk_score("crack", "medium", 0.95)
+    assert 0 <= defect["risk_score"] <= 100
+
+
 def test_quality_tasks_isolated_from_safety(client, monkeypatch):
     _force_quality_mock(monkeypatch)
     quality_headers = login(client, "quality")

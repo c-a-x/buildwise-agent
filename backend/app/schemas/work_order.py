@@ -43,6 +43,7 @@ class WorkOrderRead(BaseModel):
     risk_level: RiskLevel
     location: str
     assignee_user_id: str
+    assignee_name: str | None = None
     created_by: str
     deadline: datetime
     status: WorkOrderStatus

@@ -210,6 +210,35 @@ VISION_LLM_PROVIDER=off          # claude_cli | doubao | off
 - **与 safety 的差异**：内部状态仍复用 `hazards`/`risk_level`，质量语义只体现在字段值上（`hazard_type`=缺陷码、`hazard_name`=缺陷中文名）；`AgentRun.module` 区分 `safety`/`quality`，两端任务与工单互不串扰；
 - **降级规则**：质量模型缺失或加载失败时回退 `quality_mock` 并标记 `is_simulated=true`；模型就绪后 `provider_info.vision` 显示 `quality_hybrid:yolo`（可选叠加质量 LLM，配置方式同安全侧）。
 
+## 绿色建造 · 碳排核算（green 模块）
+
+「绿色建造」页（`/green`）提供施工阶段碳排核算核心：按 GB/T 51366-2019《建筑碳排放计算标准》因子法 `排放 = 活动数据 × 排放因子`，把材料、运输、能耗三类活动数据折算为 A1-A3（建材生产）/ A4（建材运输）/ A5（施工过程）分阶段碳排放，并给出面积强度、主要贡献项、减排建议与报告预览。
+
+- **因子库**：`data_demo/green/factors.json`，每条因子带 `code/name/unit/factor/factor_unit/source/year/verified/note`。`verified=true` 表示有公开权威来源可直接采用（如生态环境部《2022年度全国电网平均二氧化碳排放因子》0.5703 tCO2/MWh）；`verified=false` 为演示推算值（如 GB/T 51366-2019 附录 D/E 应用实例推算的 C30混凝土≈0.295 tCO2e/m³、热轧钢筋≈2.34 tCO2e/t），前端标「待核证」徽标、结果 `is_simulated=true`，正式核算需替换为经核证的因子数据；修改文件后重启后端生效；
+- **配置**（`backend/.env`）：
+  ```env
+  GREEN_FACTORS_PATH=../data_demo/green/factors.json
+  ```
+- **接口**：
+  | 接口 | 说明 |
+  | --- | --- |
+  | `POST /api/v1/green/analyze` | JSON 提交 `project_id/area_m2/scope/materials/transport/energy` → 分阶段排放 + 强度 + 建议 + 报告预览 |
+  | `GET /api/v1/green/analyses` | 碳排核算历史（可按 `project_id` 过滤） |
+  | `GET /api/v1/green/analyses/{id}` | 核算详情 |
+  | `GET /api/v1/green/analyses/{id}/report` | 下载核算 Word 报告（`.docx`，python-docx 生成，缺失时降级为 `.txt`） |
+  | `GET /api/v1/green/benchmark` | 同类项目碳排强度 z-score 对标（可按 `project_id` 高亮当前项目） |
+  | `GET /api/v1/green/factors` | 排放因子库（含 verified 标记） |
+- **与 safety/quality 的差异**：绿色为表单输入的计算核心，不走图像/五 Agent 闭环（绿色检测闭环规划中）；复用 `carbon_analyses` 表（`requested_by/area_m2/scope/is_simulated/report_preview/factor_version`），条目与分阶段明细存 `result_json`；未命中因子的条目按 0 计并给出警告，不中断请求；
+- **降级规则**：因子库缺失或解析失败时返回空库并提示 `GREEN_FACTORS_PATH` 配置，所有条目按因子缺失处理。
+
+## 统计分析（z-score）
+
+全部使用纯 Python `statistics`，不引入 numpy/scipy/pandas；统计口径如下：
+
+- **碳排强度对标**（`GET /green/benchmark`，绿色页「同类项目对标」卡）：对用户可见项目集合，每个项目取**最新一条有 `area_m2` 的核算**算强度 `total_emission/area_m2`；样本不足 2 个或标准差为 0 时显示降级文案而非报错。按强度升序排名，`z=(intensity-mean)/std` 为负表示优于均值，`better_than_pct` 为严格劣于当前项目的占比；
+- **隐患/缺陷异常检测**（`GET /stats/anomalies`，仪表盘「异常波动检测」卡）：按天统计窗口内（默认 30 天，可切 safety/quality）的 Incident 数量，`z > z_threshold`（默认 2.5）的天标红为异常；空窗口或全零（标准差为 0）时降级显示。模块按 `metadata_json.module` 分拣，`safety` 兼容无 module 键的历史行；
+- **风险评分 0-100**（安全/质量分析结果、工单草稿）：`rules/risk_rules.py::compute_risk_score` 用「隐患类型基准分 × 置信度缩放 + 重大缺陷加分」得到整数分（如 `no_helmet`≈87、`missing_guardrail`≈95）；视觉映射写入、读取接口兜底重算，历史数据也始终有分。
+
 ## 实时安全监测与硬件接口
 
 「实时监控」页（`/safety/realtime`）把现场视频源逐帧送入后端 YOLO 检测，浏览器内叠加检测框，检测到高危违规时触发软报警；可选配 ESP32 硬报警（蜂鸣器）。
@@ -273,6 +302,10 @@ $env:RETRIEVAL_PROVIDER = "local_keyword"
 ```
 
 索引状态可通过页面“规范知识库”查看，也可调用 `GET /api/v1/knowledge/index/status`。检索接口返回来源、条款、正文、相似度和 metadata；无命中返回空数组。`buildwise-chroma` volume 可以随容器重启保留索引；`docker compose down -v` 会删除它以及 SQLite volume，请仅在明确需要清理开发数据时使用。
+
+### 规范问答（统一 RAG）
+
+`POST /api/v1/knowledge/chat` 提供统一 RAG 回答组装：规范条文 → 相关风险提示 → 现场概况，逐段拼装并返回条款 citations；命中风险关键词时附加责任角色与时限（取自 `risk_rules`），传 `project_id` 时追加近 7 天现场概况。默认 `rag_only` 离线检索拼装，不调用任何外部模型；配置了 OpenAI-compatible 文本 Provider 后自动升级为 `rag_llm`（LLM 总结），调用失败或未配置一律静默降级回离线拼装，绝不伪造未授权条款。
 
 ## 主 Demo
 
@@ -345,7 +378,7 @@ npm run build
 
 ## 页面与目录
 
-页面和路由覆盖登录、注册、找回密码、仪表盘、项目管理、安全分析、实时监控、安全历史、整改工单、工单详情、工友助手、日报及历史、质量巡检、绿色占位、知识库、个人资料、系统设置，以及 403/404 页面。
+页面和路由覆盖登录、注册、找回密码、仪表盘、项目管理、安全分析、实时监控、安全历史、整改工单、工单详情、工友助手、日报及历史、质量巡检、绿色碳排核算、知识库、个人资料、系统设置，以及 403/404 页面。
 
 - `frontend/`：Vue 3 + TypeScript + Pinia + Vue Router；
 - `backend/`：FastAPI + Pydantic + SQLAlchemy + Alembic + LangGraph；
@@ -361,7 +394,11 @@ npm run build
 - 未命中本地规范时不编造条款，证据不足会提示人工补充；
 - AI 只能生成工单草稿，人工确认后才写入正式工单；
 - 日报核心数字来自 SQL 聚合，日报文案可由模板或真实文本 Provider 生成；
-- 质量巡检已接入真实五 Agent 闭环：MBDD2025 训练的 YOLO 五类缺陷检测（模型缺失时降级 `quality_mock` 并标记 `is_simulated=true`），质量工单由质检员确认；绿色施工仍为占位模块，尚未接入真实碳排数据源；
+- 质量巡检已接入真实五 Agent 闭环：MBDD2025 训练的 YOLO 五类缺陷检测（模型缺失时降级 `quality_mock` 并标记 `is_simulated=true`），质量工单由质检员确认；
+- 绿色建造已接入碳排核算核心：GB/T 51366-2019 因子法计算 A1-A3/A4/A5 分阶段排放（演示因子 `verified=false` 时 `is_simulated=true`），绿色五 Agent 检测闭环和真实碳排数据源仍为后续阶段；
+- 工单列表展示负责人姓名（`assignee_name`），未指派时回退显示负责人 ID；
+- 知识库提供统一 RAG 问答（`POST /knowledge/chat`），默认离线拼装、LLM 可选且失败自动降级；
+- 统计分析（碳排强度 z-score 对标、隐患/缺陷异常波动检测、0-100 风险评分）全部为纯 `statistics` 计算，不依赖 numpy/scipy/pandas；
 - 生产环境仍需更换 `SECRET_KEY`、使用 PostgreSQL/对象存储、限制 CORS、启用 HTTPS、集中日志和速率限制。
 
 ## 后续路线

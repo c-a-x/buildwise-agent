@@ -20,6 +20,7 @@ export interface WorkOrder {
   risk_level: RiskLevel
   location: string
   assignee_user_id: string
+  assignee_name?: string | null
   created_by: string
   deadline: string
   status: WorkOrderStatus

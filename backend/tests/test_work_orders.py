@@ -33,3 +33,17 @@ def test_worker_cannot_change_order(client):
     worker_headers = login(client, "worker")
     response = client.patch(f"/api/v1/work-orders/{order['id']}/status", headers=worker_headers, json={"status": "in_progress"})
     assert response.status_code == 403
+
+
+def test_work_order_serialize_includes_assignee_name(client):
+    headers = login(client)
+    analysis = create_analysis(client, headers)
+    order = client.post("/api/v1/work-orders", headers=headers, json={"task_id": analysis["task_id"], "confirm_ai_draft": True}).json()["data"]
+
+    # 未指定责任人时，默认落到项目经理 USR-001
+    assert order["assignee_user_id"] == "USR-001"
+    assert order["assignee_name"] == "演示项目经理"
+
+    listing = client.get("/api/v1/work-orders", headers=headers).json()["data"]
+    listed = next(item for item in listing if item["id"] == order["id"])
+    assert listed["assignee_name"] == "演示项目经理"

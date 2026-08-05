@@ -267,6 +267,19 @@ VISION_LLM_PROVIDER=off          # claude_cli | doubao | off
 ALERT_WEBHOOK_URL=http://192.168.1.50/api/alert
 ```
 
+## 工友助手（worker care）
+
+「工友助手」页（`/worker-care`）把专业整改要求转成尊重、简短、可执行的现场提醒，回答来自本地模板，不替代安全员判断。
+
+**语音输入（双通道）**：点击麦克风说话，优先使用浏览器 Web Speech（`SpeechRecognition`，zh-CN）本地识别，无需后端、无需配置；浏览器不支持时自动降级为 `MediaRecorder` 录音上传 `POST /api/v1/worker-care/transcribe` 转写。外设 USB 麦克风可在下拉中切换。
+
+**后端转写是可插拔 ASR Provider**：未配置时接口返回 `available=false` + 中文 `reason`（不报错），前端因此走本地 Web Speech。要接 whisper 兼容服务：
+
+```env
+# backend/.env —— 复用上方 LLM_* 配置，POST {LLM_BASE_URL}/audio/transcriptions
+SPEECH_PROVIDER=openai_compatible
+```
+
 ## Chroma 规范知识库
 
 只导入来源明确且已获授权的规范文件；仓库不提供来源不明的国家标准文件，也不虚构标准编号或条款。支持三种输入：

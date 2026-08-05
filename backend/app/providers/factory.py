@@ -5,6 +5,8 @@ from app.core.exceptions import AppError
 from app.providers.retrieval.base import RetrievalProvider
 from app.providers.retrieval.chroma import ChromaRetrievalProvider
 from app.providers.retrieval.local_keyword import LocalKeywordRetrievalProvider
+from app.providers.speech.base import SpeechTranscriptionProvider
+from app.providers.speech.openai_compatible import OpenAICompatibleSpeechProvider
 from app.providers.text.base import TextProvider
 from app.providers.text.openai_compatible import OpenAICompatibleTextProvider
 from app.providers.text.template import TemplateTextProvider
@@ -61,3 +63,28 @@ def build_text_provider(settings: Settings) -> TextProvider:
             model=settings.llm_model,
         )
     raise AppError("不支持的文本 Provider", "PROVIDER_NOT_SUPPORTED", 500)
+
+
+def build_speech_provider(settings: Settings) -> SpeechTranscriptionProvider:
+    if settings.speech_provider == "openai_compatible":
+        missing = [
+            name
+            for name, value in (
+                ("LLM_BASE_URL", settings.llm_base_url),
+                ("LLM_API_KEY", settings.llm_api_key),
+                ("LLM_MODEL", settings.llm_model),
+            )
+            if not value
+        ]
+        if missing:
+            raise AppError(f"SPEECH_PROVIDER=openai_compatible 请配置 {', '.join(missing)}", "PROVIDER_NOT_CONFIGURED", 500)
+        return OpenAICompatibleSpeechProvider(
+            base_url=settings.llm_base_url,
+            api_key=settings.llm_api_key,
+            model=settings.llm_model,
+        )
+    raise AppError(
+        "未配置语音转写 Provider（SPEECH_PROVIDER=off，离线时前端使用浏览器 Web Speech 识别）",
+        "PROVIDER_NOT_CONFIGURED",
+        500,
+    )

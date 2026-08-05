@@ -72,6 +72,7 @@ class Settings:
     llm_base_url: str = os.getenv("LLM_BASE_URL", "")
     llm_api_key: str = os.getenv("LLM_API_KEY", "")
     llm_model: str = os.getenv("LLM_MODEL", "")
+    speech_provider: str = os.getenv("SPEECH_PROVIDER", "off")  # off | openai_compatible
     knowledge_json_path: Path = _path_from_env(
         os.getenv("KNOWLEDGE_JSON_PATH", "../data_demo/standards/safety_standards.json"),
         "../data_demo/standards/safety_standards.json",

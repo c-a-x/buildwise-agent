@@ -2,9 +2,21 @@
 
 from __future__ import annotations
 
+import pytest
+
 from app.core.config import settings
 from app.providers.vision.yolo import YOLODetector
 from tests.conftest import login
+
+
+@pytest.fixture(autouse=True)
+def _clean_tmp_frames():
+    """清理 storage/tmp 下残留的 frame-* 临时文件，保证清理断言与手动冒烟互不干扰。"""
+    tmp_dir = settings.storage_dir / "tmp"
+    if tmp_dir.exists():
+        for path in tmp_dir.glob("frame-*"):
+            path.unlink(missing_ok=True)
+    yield
 
 
 def _token(client: object) -> str:

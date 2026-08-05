@@ -31,7 +31,8 @@
 | POST | `/api/v1/work-orders/{id}/attachments` | 保存整改图片并关联工单事件 |
 | POST | `/api/v1/reports/daily/generate` | 生成日报 |
 | GET | `/api/v1/reports/daily` | 日报历史 |
-| POST | `/api/v1/worker-care/messages` | 工人关怀消息 |
+| POST | `/api/v1/worker-care/chat` | 工友助手问答（模板 Provider） |
+| POST | `/api/v1/worker-care/transcribe` | 语音转写（multipart；未配置 ASR 时 `available=false`） |
 | GET | `/api/v1/knowledge/documents` | 已导入规范文档/条款 |
 | GET | `/api/v1/knowledge/search` | 规范知识检索 |
 | GET | `/api/v1/knowledge/index/status` | Provider、索引状态、文档数和条款数 |
@@ -90,6 +91,17 @@
 - `llm`：`{ used, model, error }`，未配置 LLM 或调用失败时 `used=false` 自动降级为离线检索拼装（`mode="rag_only"`）。
 
 传 `project_id` 时先校验项目访问权限，再追加近 7 天现场概况（隐患/缺陷计数按模块分、风险等级分布、未闭环整改工单数）。
+
+## 语音转写
+
+`POST /api/v1/worker-care/transcribe` 上传 multipart 表单：`project_id` + `audio` 音频文件（如 `voice.webm`）。返回：
+
+- `available`：`true`=转写成功；`false`=未配置 ASR Provider（不报错）；
+- `text`：转写文字（`available=false` 时为 `""`）；
+- `reason`：未配置时给中文原因，否则 `null`；
+- `provider`：实际 Provider 名（未配置时为 `"off"`）。
+
+未配置时前端自动使用浏览器 Web Speech（`SpeechRecognition`，zh-CN）本地识别，无需后端；要接 whisper 兼容服务，设 `SPEECH_PROVIDER=openai_compatible`（复用 `LLM_BASE_URL`/`LLM_API_KEY`/`LLM_MODEL`，POST `{base_url}/audio/transcriptions`）。
 
 ## 工单列表筛选
 

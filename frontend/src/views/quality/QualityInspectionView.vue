@@ -7,6 +7,7 @@ import { workOrdersApi } from '@/api/workOrders'
 import AppIcon from '@/components/common/AppIcon.vue'
 import AppPageHeader from '@/components/common/AppPageHeader.vue'
 import AppState from '@/components/common/AppState.vue'
+import CameraCapture from '@/components/capture/CameraCapture.vue'
 import DetectionPreview from '@/components/safety/DetectionPreview.vue'
 import sampleQualityCrack from '@/assets/samples/quality_1_crack.jpg'
 import sampleQualityLeakage from '@/assets/samples/quality_2_leakage.jpg'
@@ -113,6 +114,10 @@ function handleFile(event: Event): void {
   acceptFile(selected)
 }
 
+function onCaptured(file: File): void {
+  acceptFile(file)
+}
+
 function acceptFile(candidate: File | undefined): void {
   if (!candidate) return
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(candidate.type)) {
@@ -179,7 +184,7 @@ function confidence(value: number): string { return `${Math.round(value * 100)}%
     <div class="safety-layout">
       <section class="card input-panel"><div class="card-head"><div><p class="section-kicker">01 · INPUT</p><h3>准备一次质量巡检</h3></div><span class="mono">120s timeout</span></div><div class="form-grid">
         <div class="form-field"><label>当前项目</label><select :value="projects.currentProject?.id" @change="selectProject"><option v-for="project in projects.projects" :key="project.id" :value="project.id">{{ project.name }}</option></select></div>
-        <div class="form-field"><label>巡检图片 <span>*</span></label><label class="upload-zone" :class="{ 'is-dragging': isDragging }" @dragover.prevent="handleDragOver" @dragleave.prevent="handleDragLeave" @drop.prevent="handleDrop"><input type="file" accept="image/jpeg,image/png,image/webp" @change="handleFile" /><img v-if="previewUrl" :src="previewUrl" alt="已选择的巡检图片预览" /><span v-else class="upload-icon"><AppIcon name="upload" :size="22" /></span><strong>{{ file ? '重新选择巡检图片' : '点击或拖拽上传巡检图片' }}</strong><small>JPEG / PNG / WEBP · 最大 10 MB</small><span v-if="file" class="file-name">{{ file.name }}</span></label><p v-if="historyMode" class="helper-text">正在查看历史任务 {{ historyTaskId }}，无需再次上传；选择新图片后可重新分析。</p></div>
+        <div class="form-field"><label>巡检图片 <span>*</span></label><label class="upload-zone" :class="{ 'is-dragging': isDragging }" @dragover.prevent="handleDragOver" @dragleave.prevent="handleDragLeave" @drop.prevent="handleDrop"><input type="file" accept="image/jpeg,image/png,image/webp" @change="handleFile" /><img v-if="previewUrl" :src="previewUrl" alt="已选择的巡检图片预览" /><span v-else class="upload-icon"><AppIcon name="upload" :size="22" /></span><strong>{{ file ? '重新选择巡检图片' : '点击或拖拽上传巡检图片' }}</strong><small>JPEG / PNG / WEBP · 最大 10 MB</small><span v-if="file" class="file-name">{{ file.name }}</span></label><CameraCapture :disabled="quality.analyzing || quality.loadingTask" @captured="onCaptured" /><p v-if="historyMode" class="helper-text">正在查看历史任务 {{ historyTaskId }}，无需再次上传；选择新图片后可重新分析。</p></div>
         <div class="form-field"><label>示例图片 <span>点击即用</span></label><div class="sample-row"><button v-for="sample in samples" :key="sample.file" type="button" class="sample-card" @click="loadSample(sample.url, sample.file)"><img :src="sample.url" alt="示例图片" /><span class="sample-name">{{ sample.name }}</span><small class="sample-hint">{{ sample.hint }}</small></button></div></div>
         <div class="two-fields"><div class="form-field"><label for="location">巡检部位</label><input id="location" v-model.trim="location" placeholder="如：2号楼东侧外墙" /></div><div class="form-field"><label for="work-type">作业类型</label><input id="work-type" v-model.trim="workType" placeholder="如：外墙抹灰" /></div></div>
         <div class="form-field"><label for="description">现场说明 <span>可选</span></label><textarea id="description" v-model.trim="description" placeholder="补充结构部位、龄期或需要重点关注的信息" /></div>

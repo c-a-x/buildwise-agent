@@ -208,7 +208,8 @@ VISION_LLM_PROVIDER=off          # claude_cli | doubao | off
   | `GET /api/v1/quality/tasks/{task_id}` | 质量任务详情 |
   | `GET /api/v1/quality/status` | 模块状态 |
 - **与 safety 的差异**：内部状态仍复用 `hazards`/`risk_level`，质量语义只体现在字段值上（`hazard_type`=缺陷码、`hazard_name`=缺陷中文名）；`AgentRun.module` 区分 `safety`/`quality`，两端任务与工单互不串扰；
-- **降级规则**：质量模型缺失或加载失败时回退 `quality_mock` 并标记 `is_simulated=true`；模型就绪后 `provider_info.vision` 显示 `quality_hybrid:yolo`（可选叠加质量 LLM，配置方式同安全侧）。
+- **降级规则**：质量模型缺失或加载失败时回退 `quality_mock` 并标记 `is_simulated=true`；模型就绪后 `provider_info.vision` 显示 `quality_hybrid:yolo`（可选叠加质量 LLM，配置方式同安全侧）；
+- **相机拍照**：安全分析与质量巡检页面均支持本机摄像头直接拍照——`getUserMedia` 打开预览（复用实时监控页的设备选择模式），拍摄单帧转成 JPEG 图片后走同一个 analyze 闭环；画面仅在本浏览器内处理、不额外存储；无摄像头或权限被拒时仍可上传/使用示例图，不报错降级。
 
 ## 绿色建造 · 碳排核算（green 模块）
 
@@ -403,6 +404,7 @@ npm run build
 
 - 视觉识别可切换为 `safety_hybrid` 十类真实 YOLO 检测（未佩戴安全帽/未戴口罩/未穿安全背心/人/机械/车辆等）；模型未配置或加载失败时降级为模拟结果并显式标记 `is_simulated=true`；文本生成仍为本地模板 Provider；
 - 实时监控为逐帧 YOLO 检测（1 帧/秒、仅本机分析），模型缺失时降级为仅显示画面不检测；ESP32 蜂鸣器硬报警为预留接口，需固件侧实现 HTTP 服务接收 webhook 驱动 GPIO；
+- 安全分析与质量巡检页面支持本机摄像头拍照：拍摄单帧作为图片走 analyze 闭环（`getUserMedia` 仅在本浏览器内处理、不额外存储），仍为「定点拍、单图分析」，不做连续逐帧检测；
 - `RETRIEVAL_PROVIDER=local_keyword` 是离线关键词能力，`chroma` 是本轮接入的真实持久化向量检索投影；
 - 未命中本地规范时不编造条款，证据不足会提示人工补充；
 - AI 只能生成工单草稿，人工确认后才写入正式工单；

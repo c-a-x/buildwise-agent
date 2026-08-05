@@ -42,3 +42,8 @@ _ext_src/
 
 # 解压的第三方数据集（Construction Site Safety Dataset，运行时数据，不入库）
 archive/
+
+# MBDD2025 建筑缺陷 UAV 数据集（2.4GB 运行时数据）与质量 YOLO 训练中间产物
+MBDD2025/
+data_demo/quality_yolo/
+runs/

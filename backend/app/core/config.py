@@ -57,6 +57,11 @@ class Settings:
         "storage/models/yolov8n.pt",
     )
     yolo_conf_threshold: float = float(os.getenv("YOLO_CONF_THRESHOLD", "0.5"))
+    quality_model_path: Path = _path_from_env(
+        os.getenv("QUALITY_MODEL_PATH", "storage/models/yolov8n-5cls-mbdd.pt"),
+        "storage/models/yolov8n-5cls-mbdd.pt",
+    )
+    quality_conf_threshold: float = float(os.getenv("QUALITY_CONF_THRESHOLD", "0.45"))
     vision_llm_provider: str = os.getenv("VISION_LLM_PROVIDER", "off")  # claude_cli | doubao | off
     vision_llm_claude_cmd: str = os.getenv("VISION_LLM_CLAUDE_CMD", "claude")
     vision_llm_timeout: int = int(os.getenv("VISION_LLM_TIMEOUT", "300"))
@@ -70,6 +75,10 @@ class Settings:
     knowledge_json_path: Path = _path_from_env(
         os.getenv("KNOWLEDGE_JSON_PATH", "../data_demo/standards/safety_standards.json"),
         "../data_demo/standards/safety_standards.json",
+    )
+    quality_knowledge_json_path: Path = _path_from_env(
+        os.getenv("QUALITY_KNOWLEDGE_JSON_PATH", "../data_demo/standards/quality_standards.json"),
+        "../data_demo/standards/quality_standards.json",
     )
     cors_origins: tuple[str, ...] = tuple(
         origin.strip()

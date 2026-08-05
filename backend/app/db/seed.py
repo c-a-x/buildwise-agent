@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from app.core.config import settings
 from app.core.security import hash_password
@@ -11,6 +12,25 @@ from app.utils.ids import new_id
 
 
 DEMO_PASSWORD = "BuildWise123!"
+
+
+def _ingest_knowledge(db, json_path: Path) -> int:
+    """把单个规范 JSON 文件按稳定 ID 增量灌入 KnowledgeDocument。返回导入条数。"""
+    documents: list[dict[str, object]] = []
+    if json_path.exists():
+        try:
+            parsed = json.loads(json_path.read_text(encoding="utf-8"))
+            if isinstance(parsed, list):
+                documents = [item for item in parsed if isinstance(item, dict)]
+        except (OSError, json.JSONDecodeError):
+            documents = []
+    for item in documents:
+        document_id = str(item.get("id", new_id("KNO")))
+        if not db.get(KnowledgeDocument, document_id):
+            metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+            metadata = {**metadata, "hazard_types": item.get("hazard_types", metadata.get("hazard_types", [])), "keywords": item.get("keywords", metadata.get("keywords", [])), "document_id": document_id}
+            db.add(KnowledgeDocument(id=document_id, title=str(item.get("title", item.get("article", "条款"))), source=str(item.get("source", "项目管理制度")), version=str(item.get("version", "MVP")), article=str(item.get("article", "")), category=str(item.get("category", "施工管理")), effective_date=str(item.get("effective_date")) if item.get("effective_date") else None, content=str(item.get("content", "")), metadata_json=metadata, status="active"))
+    return len(documents)
 
 
 def seed_database() -> None:
@@ -46,22 +66,10 @@ def seed_database() -> None:
             user = by_username[username]
             if not db.query(ProjectMember).filter(ProjectMember.project_id == project.id, ProjectMember.user_id == user.id).first():
                 db.add(ProjectMember(id=new_id("MEM"), project_id=project.id, user_id=user.id, project_role=project_role))
-        documents: list[dict[str, object]] = []
-        if settings.knowledge_json_path.exists():
-            try:
-                parsed = json.loads(settings.knowledge_json_path.read_text(encoding="utf-8"))
-                if isinstance(parsed, list):
-                    documents = [item for item in parsed if isinstance(item, dict)]
-            except (OSError, json.JSONDecodeError):
-                documents = []
-        for item in documents:
-            document_id = str(item.get("id", new_id("KNO")))
-            if not db.get(KnowledgeDocument, document_id):
-                metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
-                metadata = {**metadata, "hazard_types": item.get("hazard_types", metadata.get("hazard_types", [])), "keywords": item.get("keywords", metadata.get("keywords", [])), "document_id": document_id}
-                db.add(KnowledgeDocument(id=document_id, title=str(item.get("title", item.get("article", "安全条款"))), source=str(item.get("source", "项目安全制度")), version=str(item.get("version", "MVP")), article=str(item.get("article", "")), category=str(item.get("category", "施工安全")), effective_date=str(item.get("effective_date")) if item.get("effective_date") else None, content=str(item.get("content", "")), metadata_json=metadata, status="active"))
+        safety_docs = _ingest_knowledge(db, settings.knowledge_json_path)
+        quality_docs = _ingest_knowledge(db, settings.quality_knowledge_json_path)
         db.commit()
-        print(f"Seed complete: {len(users)} users, project={project.code}, knowledge={len(documents)}")
+        print(f"Seed complete: {len(users)} users, project={project.code}, knowledge=safety:{safety_docs} quality:{quality_docs}")
     finally:
         db.close()
 

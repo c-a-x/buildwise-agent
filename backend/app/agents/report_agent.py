@@ -9,16 +9,17 @@ from app.workflow.state import WorkflowState
 class ReportAgent:
     name = "ReportAgent"
 
-    def __init__(self, provider: TextProvider) -> None:
+    def __init__(self, provider: TextProvider, finding_label: str = "隐患") -> None:
         self.provider = provider
+        self.finding_label = finding_label
 
     def run(self, state: WorkflowState) -> dict[str, object]:
         started = datetime.now(timezone.utc)
         hazards = state.get("hazards", [])
         if hazards:
-            preview = f"本次分析发现 {len(hazards)} 项隐患，综合风险等级为 {state.get('risk_level', 'normal')}，已生成整改草稿，等待人工确认。"
+            preview = f"本次分析发现 {len(hazards)} 项{self.finding_label}，综合风险等级为 {state.get('risk_level', 'normal')}，已生成整改草稿，等待人工确认。"
         else:
-            preview = "本次分析未发现新增隐患，仍需结合现场管理要求进行人工复核。"
+            preview = f"本次分析未发现新增{self.finding_label}，仍需结合现场管理要求进行人工复核。"
         trace = {
             "agent": self.name,
             "status": "completed",

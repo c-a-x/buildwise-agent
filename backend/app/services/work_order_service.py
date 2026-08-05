@@ -11,7 +11,7 @@ from app.schemas.work_order import WorkOrderCreate, WorkOrderStatusUpdate
 from app.utils.ids import new_id
 
 
-ALLOWED_MUTATORS = {"admin", "project_manager", "safety_officer"}
+ALLOWED_MUTATORS = {"admin", "project_manager", "safety_officer", "quality_inspector"}
 VALID_TRANSITIONS = {
     "pending": {"in_progress"},
     "in_progress": {"pending_review"},
@@ -44,9 +44,15 @@ class WorkOrderService:
         )
         if existing:
             return existing
+        # 人工确认的是 AI 工单草稿本身：优先采用草稿内容（质量/安全语义均由对应
+        # WorkOrderAgent 规则生成），草稿缺失时才回退到安全侧兜底规则。
+        result_json = task.result_json if isinstance(task.result_json, dict) else {}
+        draft = result_json.get("work_order_draft") if isinstance(result_json.get("work_order_draft"), dict) else {}
         assignee = self._resolve_assignee(task.project_id, request.assignee_user_id, actor)
         deadline = request.deadline or self._default_deadline(incident.risk_level)
-        requirements = self._requirements(incident.hazard_type)
+        requirements = draft.get("rectification_requirements") or self._requirements(incident.hazard_type)
+        review_requirements = draft.get("review_requirements") or ["整改完成后上传现场照片并由安全员复查"]
+        worker_message = draft.get("worker_message") or result_json.get("worker_message") or self._worker_message(incident.risk_level, incident.hazard_name, requirements)
         order = WorkOrder(
             id=new_id("WO"),
             project_id=task.project_id,
@@ -61,8 +67,8 @@ class WorkOrderService:
             deadline=deadline,
             status="pending",
             rectification_requirements_json=requirements,
-            review_requirements_json=["整改完成后上传现场照片并由安全员复查"],
-            worker_message=self._worker_message(incident.risk_level, incident.hazard_name, requirements),
+            review_requirements_json=review_requirements,
+            worker_message=worker_message,
             ai_generated=True,
             confirmed_by_human=True,
         )

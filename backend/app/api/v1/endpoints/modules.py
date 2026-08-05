@@ -23,12 +23,12 @@ def modules(http_request: Request):
             {
                 "key": "quality",
                 "name": "工程质量巡检",
-                "agent_name": "QualityAgent",
-                "status": "planned",
-                "description": "占位模块。",
-                "planned_inputs": ["巡检图片"],
-                "planned_outputs": ["缺陷清单"],
-                "available_endpoints": ["GET /api/v1/quality/status"],
+                "agent_name": "QualityAgent → ReportAgent",
+                "status": "available",
+                "description": "离线五节点质量闭环（裂缝/渗漏/剥落/锈蚀/鼓包）。",
+                "planned_inputs": ["巡检图片", "位置", "作业类型"],
+                "planned_outputs": ["缺陷", "依据", "工单草稿", "日报预览"],
+                "available_endpoints": ["POST /api/v1/quality/analyze", "GET /api/v1/quality/tasks"],
             },
             {
                 "key": "green",

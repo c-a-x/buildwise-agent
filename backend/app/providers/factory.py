@@ -11,6 +11,7 @@ from app.providers.text.template import TemplateTextProvider
 from app.providers.vision.base import VisionProvider
 from app.providers.vision.hybrid import SafetyHybridVisionProvider
 from app.providers.vision.mock import MockVisionProvider
+from app.providers.vision.quality_hybrid import QualityHybridVisionProvider
 from app.providers.vision.ultralytics import UltralyticsVisionProvider
 
 
@@ -23,6 +24,8 @@ def build_vision_provider(settings: Settings) -> VisionProvider:
         return UltralyticsVisionProvider(settings.vision_model_path)
     if settings.vision_provider == "safety_hybrid":
         return SafetyHybridVisionProvider(settings)
+    if settings.vision_provider == "quality_hybrid":
+        return QualityHybridVisionProvider(settings)
     raise AppError("不支持的视觉 Provider", "PROVIDER_NOT_SUPPORTED", 500)
 
 

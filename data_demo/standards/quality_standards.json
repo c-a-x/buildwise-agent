@@ -1,0 +1,12 @@
+[
+  {"id":"STD-Q-CRACK-001","title":"裂缝处理要求","category":"墙体缺陷","hazard_types":["crack"],"source":"项目质量管理制度","article":"第3.1条","content":"混凝土和墙体裂缝应按裂缝宽度、深度和是否影响结构安全分类处理，处理后应复查裂缝闭合情况。","keywords":["裂缝","封缝","注浆","墙体"]},
+  {"id":"STD-Q-CRACK-002","title":"裂缝宽度观测","category":"墙体缺陷","hazard_types":["crack"],"source":"项目质量管理制度","article":"第3.2条","content":"对疑似结构性裂缝应设置观测标志，连续观测记录宽度变化，并通知设计单位评估。","keywords":["裂缝","观测","宽度","结构"]},
+  {"id":"STD-Q-LEAK-001","title":"渗漏排查与防水处理","category":"墙体缺陷","hazard_types":["leakage"],"source":"项目质量管理制度","article":"第4.1条","content":"发现墙面渗漏应先查明渗水源头，对屋面、外墙和接缝部位重新做防水与密封处理。","keywords":["渗漏","渗水","防水","密封"]},
+  {"id":"STD-Q-LEAK-002","title":"渗漏复检","category":"墙体缺陷","hazard_types":["leakage"],"source":"项目质量管理制度","article":"第4.2条","content":"防水处理后应经淋水或自然降水检验，确认无渗漏后方可进行后续饰面施工。","keywords":["渗漏","复检","淋水","防水"]},
+  {"id":"STD-Q-ABSC-001","title":"抹灰空鼓剥落处理","category":"墙体缺陷","hazard_types":["abscission"],"source":"项目质量管理制度","article":"第5.1条","content":"抹灰和饰面层出现空鼓、剥落的，应铲除至坚实基层，重新抹灰找平并做好养护。","keywords":["剥落","空鼓","抹灰","饰面"]},
+  {"id":"STD-Q-ABSC-002","title":"外墙面砖空鼓排查","category":"墙体缺陷","hazard_types":["abscission"],"source":"项目质量管理制度","article":"第5.2条","content":"外墙饰面应逐层敲击排查空鼓，空鼓面积超标部位应返工重贴，防止坠落伤人。","keywords":["空鼓","外墙面砖","敲击","返工"]},
+  {"id":"STD-Q-CORR-001","title":"钢结构除锈防腐","category":"墙体缺陷","hazard_types":["corrosion"],"source":"项目质量管理制度","article":"第6.1条","content":"钢结构构件表面锈蚀的，应除锈至设计要求的除锈等级后，及时涂刷防锈和面层防腐涂料。","keywords":["锈蚀","除锈","防腐","涂料"]},
+  {"id":"STD-Q-CORR-002","title":"预埋件与钢筋防锈","category":"墙体缺陷","hazard_types":["corrosion"],"source":"项目质量管理制度","article":"第6.2条","content":"外露预埋件和钢筋发生锈蚀的，应清理锈层并按方案做好防锈保护。","keywords":["预埋件","钢筋","锈蚀","防锈"]},
+  {"id":"STD-Q-BULG-001","title":"饰面鼓包处理","category":"墙体缺陷","hazard_types":["bulge"],"source":"项目质量管理制度","article":"第7.1条","content":"饰面层或涂层局部鼓包隆起的，应凿除检查基层空鼓范围，处理后重新施作饰面。","keywords":["鼓包","隆起","空鼓","饰面"]},
+  {"id":"STD-Q-BULG-002","title":"基层含水率控制","category":"墙体缺陷","hazard_types":["bulge"],"source":"项目质量管理制度","article":"第7.2条","content":"涂层和饰面施工前应控制基层含水率，防止因基层含水率超标导致鼓泡起皮。","keywords":["鼓包","含水率","涂层","基层"]}
+]

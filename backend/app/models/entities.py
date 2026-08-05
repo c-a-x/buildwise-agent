@@ -71,6 +71,7 @@ class AgentRun(Base):
     __table_args__ = (Index("ix_agent_runs_project_created", "project_id", "created_at"),)
 
     id = Column(String(64), primary_key=True, default=lambda: new_id("TASK"))
+    module = Column(String(20), default="safety", nullable=False, index=True)  # safety | quality
     project_id = Column(String(64), ForeignKey("projects.id"), nullable=False)
     upload_id = Column(String(64), ForeignKey("uploads.id"), nullable=False)
     requested_by = Column(String(64), ForeignKey("users.id"), nullable=False)

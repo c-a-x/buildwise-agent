@@ -8,17 +8,19 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.exceptions import AppError, NotFoundError
 from app.models import AgentRun, Incident, IncidentEvidence, Upload
-from app.schemas.safety import SafetyAnalysisResponse
+from app.schemas.quality import QualityAnalysisResponse
 from app.utils.files import save_upload
 from app.utils.images import create_annotated_copy
 from app.utils.ids import new_id
 from app.workflow.graph import build_workflow
 
 
-class SafetyService:
+class QualityService:
+    """质量巡检分析：与 SafetyService 同构，但走 quality 模块五 agent + 独立规范知识库。"""
+
     def __init__(self, db: Session) -> None:
         self.db = db
-        self.workflow = build_workflow(settings.knowledge_json_path, settings)
+        self.workflow = build_workflow(settings.quality_knowledge_json_path, settings, module="quality")
 
     def analyze(
         self,
@@ -32,7 +34,7 @@ class SafetyService:
         description: str,
         demo_scenario: str | None,
         requested_by: str,
-    ) -> SafetyAnalysisResponse:
+    ) -> QualityAnalysisResponse:
         stored_name, sha256, size_bytes = save_upload(
             image_bytes, content_type, settings.upload_dir, settings.max_upload_mb
         )
@@ -51,7 +53,7 @@ class SafetyService:
         self.db.flush()
         task = AgentRun(
             id=new_id("TASK"),
-            module="safety",
+            module="quality",
             project_id=project_id,
             upload_id=upload.id,
             requested_by=requested_by,
@@ -75,7 +77,7 @@ class SafetyService:
                     "work_type": work_type,
                     "description": description,
                     "requested_by": requested_by,
-                    "demo_scenario": demo_scenario or "no_helmet",
+                    "demo_scenario": demo_scenario or "crack",
                 }
             )
             incidents: list[Incident] = []
@@ -86,12 +88,13 @@ class SafetyService:
                     project_id=project_id,
                     upload_id=upload.id,
                     hazard_type=str(hazard.get("hazard_type", "unknown")),
-                    hazard_name=str(hazard.get("hazard_name", "现场隐患")),
+                    hazard_name=str(hazard.get("hazard_name", "质量缺陷")),
                     description=str(hazard.get("description", "")),
                     confidence=float(hazard.get("confidence", 0.0)),
                     risk_level=str(hazard.get("risk_level", state.get("risk_level", "medium"))),
                     bbox_json=hazard.get("bbox"),
                     metadata_json={
+                        "module": "quality",
                         "source": hazard.get("source"),
                         "regulation": hazard.get("regulation"),
                         "suggestion": hazard.get("suggestion"),
@@ -142,10 +145,10 @@ class SafetyService:
             task.finished_at = datetime.now(timezone.utc)
             self.db.add(task)
             self.db.commit()
-            raise AppError("安全分析执行失败", "SAFETY_ANALYSIS_FAILED", 500) from exc
+            raise AppError("质量分析执行失败", "QUALITY_ANALYSIS_FAILED", 500) from exc
 
     def list_tasks(self, project_id: str | None = None) -> list[dict[str, object]]:
-        query = self.db.query(AgentRun).filter(AgentRun.module == "safety")
+        query = self.db.query(AgentRun).filter(AgentRun.module == "quality")
         if project_id:
             query = query.filter(AgentRun.project_id == project_id)
         tasks = query.order_by(AgentRun.created_at.desc()).all()
@@ -164,10 +167,10 @@ class SafetyService:
             for task in tasks
         ]
 
-    def get_task(self, task_id: str) -> SafetyAnalysisResponse:
+    def get_task(self, task_id: str) -> QualityAnalysisResponse:
         task = self.db.get(AgentRun, task_id)
-        if not task or task.module != "safety":
-            raise NotFoundError("分析任务不存在", "SAFETY_TASK_NOT_FOUND")
+        if not task or task.module != "quality":
+            raise NotFoundError("分析任务不存在", "QUALITY_TASK_NOT_FOUND")
         upload = self.db.get(Upload, task.upload_id)
         if not upload:
             raise NotFoundError("上传文件不存在", "UPLOAD_NOT_FOUND")
@@ -188,12 +191,12 @@ class SafetyService:
         }
         return self._response(task, upload, incidents, state, None)
 
-    def _response(self, task, upload, incidents, state, annotated_name: str | None) -> SafetyAnalysisResponse:
-        hazards = [self._hazard_dict(item) for item in incidents]
+    def _response(self, task, upload, incidents, state, annotated_name: str | None) -> QualityAnalysisResponse:
+        defects = [self._hazard_dict(item) for item in incidents]
         evidence_ids = [item.id for item in incidents]
         evidence_rows = self.db.query(IncidentEvidence).filter(IncidentEvidence.incident_id.in_(evidence_ids)).all() if evidence_ids else []
         draft = state.get("work_order_draft")
-        return SafetyAnalysisResponse(
+        return QualityAnalysisResponse(
             task_id=task.id,
             project_id=task.project_id,
             upload_id=upload.id,
@@ -202,7 +205,7 @@ class SafetyService:
             location=task.location,
             work_type=task.work_type,
             risk_level=task.risk_level,
-            hazards=hazards,
+            defects=defects,
             evidence=[self._evidence_dict(item) for item in evidence_rows],
             work_order_draft=draft,
             worker_message=str(state.get("worker_message", "")),

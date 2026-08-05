@@ -183,6 +183,33 @@ VISION_LLM_PROVIDER=off          # claude_cli | doubao | off
 
 **模型放置**：模型文件是运行期数据、不入 Git。可从数据集训练产物中复制 `results_yolov8n_100e/kaggle/working/runs/detect/train/weights/best.pt` 到 `backend/storage/models/yolov8n-10cls.pt`，或用 ultralytics 在同一 10 类数据集上自行训练并替换。
 
+## 质量巡检（quality 模块）
+
+「质量巡检」页（`/quality`）完全复刻安全分析的五 Agent 架构（QualityAgent → RagAgent → WorkOrderAgent → WorkerCareAgent → ReportAgent），语义改为建筑缺陷检测，质量工单由 `quality_inspector` 角色确认闭环。
+
+- **5 类缺陷**：crack 裂缝（中危）/ leakage 渗漏（中危）/ abscission 剥落（高危）/ corrosion 锈蚀（中危）/ bulge 鼓包（高危）；
+- **模型**：`backend/storage/models/yolov8n-5cls-mbdd.pt`，在 MBDD2025 数据集（14,471 张 UAV 墙体缺陷图，5 类）上微调 `yolov8n` 得到（imgsz=640、batch=48、RTX 5060 8GB 显存）。实际验收模型在第 40 epoch：验证集 mAP@50 = **0.8393**、mAP50-95 = **0.4492**、P = 0.8417、R = 0.7738。训练命令：
+  ```powershell
+  /d/anaconda3/envs/pytorch2.0/python.exe scripts/train_quality_yolo.py
+  ```
+  脚本自动按固定 seed 90/10 划分数据到 `data_demo/quality_yolo/`（不入 Git）、训练并把 `best.pt` 复制到模型路径，同时挑选 3 张单缺陷示例图到 `frontend/src/assets/samples/quality_*.jpg`。脚本内置 `torchvision.ops.nms` 的 **CPU NMS 回退补丁**（RTX 5060 Blackwell 无对应 CUDA NMS 内核，回退到 CPU 内核结果完全一致且快 ~18x），无需额外操作；`--reuse-train` 可跳过训练、直接发布现有 `best.pt`；
+- **配置**（`backend/.env`）：
+  ```env
+  QUALITY_MODEL_PATH=storage/models/yolov8n-5cls-mbdd.pt
+  QUALITY_CONF_THRESHOLD=0.45
+  QUALITY_KNOWLEDGE_JSON_PATH=../data_demo/standards/quality_standards.json
+  ```
+  质量规范独立于安全规范（`data_demo/standards/quality_standards.json`，与 safety 一样只含项目内部有据条款，不编造标准编号）；RagAgent 按 `AgentRun.module` 检索对应知识库；
+- **接口**：
+  | 接口 | 说明 |
+  | --- | --- |
+  | `POST /api/v1/quality/analyze` | 上传巡检图片（Form：`image`/`project_id`/`location`/`work_type`/`description`/`demo_scenario`）→ 缺陷清单 + 五 Agent 轨迹 + 工单草稿 |
+  | `GET /api/v1/quality/tasks` | 质量任务列表（可按 `project_id` 过滤） |
+  | `GET /api/v1/quality/tasks/{task_id}` | 质量任务详情 |
+  | `GET /api/v1/quality/status` | 模块状态 |
+- **与 safety 的差异**：内部状态仍复用 `hazards`/`risk_level`，质量语义只体现在字段值上（`hazard_type`=缺陷码、`hazard_name`=缺陷中文名）；`AgentRun.module` 区分 `safety`/`quality`，两端任务与工单互不串扰；
+- **降级规则**：质量模型缺失或加载失败时回退 `quality_mock` 并标记 `is_simulated=true`；模型就绪后 `provider_info.vision` 显示 `quality_hybrid:yolo`（可选叠加质量 LLM，配置方式同安全侧）。
+
 ## 实时安全监测与硬件接口
 
 「实时监控」页（`/safety/realtime`）把现场视频源逐帧送入后端 YOLO 检测，浏览器内叠加检测框，检测到高危违规时触发软报警；可选配 ESP32 硬报警（蜂鸣器）。
@@ -318,7 +345,7 @@ npm run build
 
 ## 页面与目录
 
-页面和路由覆盖登录、注册、找回密码、仪表盘、项目管理、安全分析、实时监控、安全历史、整改工单、工单详情、工友助手、日报及历史、质量占位、绿色占位、知识库、个人资料、系统设置，以及 403/404 页面。
+页面和路由覆盖登录、注册、找回密码、仪表盘、项目管理、安全分析、实时监控、安全历史、整改工单、工单详情、工友助手、日报及历史、质量巡检、绿色占位、知识库、个人资料、系统设置，以及 403/404 页面。
 
 - `frontend/`：Vue 3 + TypeScript + Pinia + Vue Router；
 - `backend/`：FastAPI + Pydantic + SQLAlchemy + Alembic + LangGraph；
@@ -334,7 +361,7 @@ npm run build
 - 未命中本地规范时不编造条款，证据不足会提示人工补充；
 - AI 只能生成工单草稿，人工确认后才写入正式工单；
 - 日报核心数字来自 SQL 聚合，日报文案可由模板或真实文本 Provider 生成；
-- 质量和绿色施工提供正式页面、状态接口和数据结构，尚未接入真实巡检或碳排数据源；
+- 质量巡检已接入真实五 Agent 闭环：MBDD2025 训练的 YOLO 五类缺陷检测（模型缺失时降级 `quality_mock` 并标记 `is_simulated=true`），质量工单由质检员确认；绿色施工仍为占位模块，尚未接入真实碳排数据源；
 - 生产环境仍需更换 `SECRET_KEY`、使用 PostgreSQL/对象存储、限制 CORS、启用 HTTPS、集中日志和速率限制。
 
 ## 后续路线

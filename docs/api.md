@@ -36,7 +36,10 @@
 | GET | `/api/v1/knowledge/search` | 规范知识检索 |
 | GET | `/api/v1/knowledge/index/status` | Provider、索引状态、文档数和条款数 |
 | POST | `/api/v1/knowledge/reindex` | 按当前知识源重建 Chroma 索引 |
-| GET | `/api/v1/quality/status` | 质量模块占位状态 |
+| POST | `/api/v1/quality/analyze` | 质量巡检分析（上传图片 → 五 Agent 缺陷闭环） |
+| GET | `/api/v1/quality/tasks` | 质量任务列表 |
+| GET | `/api/v1/quality/tasks/{id}` | 质量任务详情 |
+| GET | `/api/v1/quality/status` | 质量模块状态 |
 | GET | `/api/v1/green/status` | 绿色模块占位状态 |
 | GET | `/api/v1/health` | 健康检查，包含 Provider 与 SQLite 连接状态 |
 

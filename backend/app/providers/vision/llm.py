@@ -136,6 +136,11 @@ class LLMHazardAnalyzer:
         self.settings = settings
         self.provider = settings.vision_llm_provider
         self.timeout = settings.vision_llm_timeout
+        # 领域提示与映射可被子类（质量缺陷分析）覆盖
+        self.system_prompt = SYSTEM_PROMPT
+        self.analyze_prompt = ANALYZE_PROMPT
+        self.json_schema = _JSON_SCHEMA
+        self._finding_mapper = llm_finding_to_hazard
 
     def analyze_sync(self, image_path: str) -> tuple[list[dict[str, Any]], bool]:
         """返回 (buildwise hazard 列表, 是否成功执行)。
@@ -151,7 +156,7 @@ class LLMHazardAnalyzer:
             return [], False
         if not ok:
             return [], False
-        return [llm_finding_to_hazard(finding) for finding in findings], True
+        return [self._finding_mapper(finding) for finding in findings], True
 
     def _claude_cli(self, image_path: str) -> tuple[bool, list[dict[str, Any]]]:
         cmd = shutil.which(self.settings.vision_llm_claude_cmd) or self.settings.vision_llm_claude_cmd
@@ -161,14 +166,14 @@ class LLMHazardAnalyzer:
         args = [
             cmd,
             "-p",
-            ANALYZE_PROMPT,
+            self.analyze_prompt,
             "--system-prompt",
-            SYSTEM_PROMPT,
+            self.system_prompt,
             "--output-format",
             "json",
             "--no-session-persistence",
             "--json-schema",
-            json.dumps(_JSON_SCHEMA, ensure_ascii=False),
+            json.dumps(self.json_schema, ensure_ascii=False),
             image_abs,
         ]
         env = dict(os.environ)
@@ -243,12 +248,12 @@ class LLMHazardAnalyzer:
         payload = {
             "model": model,
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": self.system_prompt},
                 {
                     "role": "user",
                     "content": [
                         {"type": "image_url", "image_url": {"url": data_uri}},
-                        {"type": "text", "text": ANALYZE_PROMPT},
+                        {"type": "text", "text": self.analyze_prompt},
                     ],
                 },
             ],
@@ -271,3 +276,79 @@ class LLMHazardAnalyzer:
             return False, []
         findings = _parse_findings(str(content))
         return True, (findings or [])
+
+
+# --------------------------------------------------------------------------
+# 质量缺陷领域变体（QualityAgent / quality_hybrid 使用）
+# --------------------------------------------------------------------------
+
+QUALITY_CATEGORIES = [
+    ("D1", "裂缝", "墙面、梁柱混凝土或饰面出现可见裂缝"),
+    ("D2", "渗漏", "墙面、屋面或接缝部位出现水渍、渗水或漏水痕迹"),
+    ("D3", "剥落", "抹灰、饰面层局部空鼓、起皮、剥落掉块"),
+    ("D4", "锈蚀", "钢结构、预埋件或钢筋出现锈蚀、锈斑或锈水流痕"),
+    ("D5", "鼓包", "饰面层或涂层局部鼓起、隆起、空鼓变形"),
+]
+
+QUALITY_SYSTEM_PROMPT = (
+    "你是一名资深工程质检员，负责对建筑墙体（UAV 无人机巡检影像）进行质量缺陷排查。"
+    "你的分析必须严谨、专业、基于图片中实际可见的内容，不得凭空编造缺陷或规范条款。"
+)
+
+QUALITY_ANALYZE_PROMPT = """请分析这张建筑墙体 UAV 巡检照片，识别其中的质量缺陷。
+
+缺陷分类（category_code）：
+D1 裂缝 | D2 渗漏 | D3 剥落 | D4 锈蚀 | D5 鼓包
+
+要求：
+1. 逐条列出所有可确认的缺陷，每条 category_code/category_name 对应上述分类；
+2. description 用中文简洁描述缺陷位置、形态和范围（1 句）；
+3. severity 取 high/medium/low 三档，按对结构安全与使用功能的影响判断；
+4. regulation 引用真实、适用的质量验收规范条款，格式为《规范名称》第X.Y.Z条；
+   不确定或无法确认的引用不要编造，填空字符串；
+5. suggestion 给出具体、可执行的修复或加固建议（1 句）；
+6. confidence 为 0~1 的判断置信度；
+7. 若缺陷达到可能影响结构安全的严重程度，is_major 置 true 并在 major_basis 中说明判定依据；
+8. 如果图片中确认没有缺陷，返回 {"hazards": []}，不要强行编造。
+
+只输出 JSON，不要输出任何解释文字。JSON 结构：
+{"hazards": [{"category_code": "D1", "category_name": "裂缝", "description": "...", "severity": "high", "regulation": "《...》第X.Y.Z条", "suggestion": "...", "confidence": 0.9, "is_major": false, "major_basis": ""}]}
+"""
+
+QUALITY_JSON_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "hazards": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "category_code": {"type": "string", "enum": ["D1", "D2", "D3", "D4", "D5"]},
+                    "category_name": {"type": "string"},
+                    "description": {"type": "string"},
+                    "severity": {"type": "string", "enum": ["high", "medium", "low"]},
+                    "regulation": {"type": "string"},
+                    "suggestion": {"type": "string"},
+                    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                    "is_major": {"type": "boolean"},
+                    "major_basis": {"type": "string"},
+                },
+                "required": ["category_code", "category_name", "description", "severity"],
+            },
+        }
+    },
+    "required": ["hazards"],
+}
+
+
+class QualityLLMHazardAnalyzer(LLMHazardAnalyzer):
+    """质量缺陷 LLM 分析器：复用 claude_cli / doubao 调用链，仅换领域提示与映射。"""
+
+    def __init__(self, settings: Settings) -> None:
+        super().__init__(settings)
+        from app.providers.vision.quality_mapping import quality_llm_finding_to_hazard
+
+        self.system_prompt = QUALITY_SYSTEM_PROMPT
+        self.analyze_prompt = QUALITY_ANALYZE_PROMPT
+        self.json_schema = QUALITY_JSON_SCHEMA
+        self._finding_mapper = quality_llm_finding_to_hazard

@@ -9,9 +9,10 @@ class TemplateTextProvider:
         hazard_name = str(payload.get("hazard_name", "现场隐患"))
         requirements = payload.get("requirements", [])
         first_requirement = str(requirements[0]) if isinstance(requirements, list) and requirements else "请按安全员要求完成整改"
+        role = str(payload.get("role", "安全员"))
         if risk_level in {"high", "critical"}:
-            return f"师傅，请先暂停作业。现场发现{hazard_name}，{first_requirement}，待安全员确认后再继续施工。"
-        return f"师傅，现场发现{hazard_name}。{first_requirement}，完成后请联系安全员复查。"
+            return f"师傅，请先暂停作业。现场发现{hazard_name}，{first_requirement}，待{role}确认后再继续施工。"
+        return f"师傅，现场发现{hazard_name}。{first_requirement}，完成后请联系{role}复查。"
 
     def generate_report(self, payload: dict[str, object]) -> str:
         statistics = payload.get("statistics", {})

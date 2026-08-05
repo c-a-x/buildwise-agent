@@ -11,16 +11,34 @@ RULES: dict[str, dict[str, object]] = {
     "no_safety_vest": {"assignee_role": "safety_officer", "deadline_hours": 24, "requirements": ["穿戴符合要求的反光安全背心"]},
 }
 
+# 质量缺陷（defect_type）→ 责任质检员 / 整改要求。assignee_role 复用安全工单的角色体系。
+QUALITY_RULES: dict[str, dict[str, object]] = {
+    "crack": {"assignee_role": "quality_inspector", "deadline_hours": 24, "requirements": ["对裂缝进行注浆封缝处理并记录裂缝宽度变化"]},
+    "leakage": {"assignee_role": "quality_inspector", "deadline_hours": 24, "requirements": ["排查渗漏源头，重新做好防水与接缝密封处理"]},
+    "abscission": {"assignee_role": "quality_inspector", "deadline_hours": 12, "requirements": ["清除空鼓剥落部位，重新抹灰找平并养护"]},
+    "corrosion": {"assignee_role": "quality_inspector", "deadline_hours": 24, "requirements": ["除锈后重新涂刷防锈防腐涂层"]},
+    "bulge": {"assignee_role": "quality_inspector", "deadline_hours": 12, "requirements": ["凿除鼓包部位，排查空鼓范围后重新处理饰面"]},
+}
+
+
+def _reviewer_label(assignee_role: str) -> str:
+    """按责任角色给出复查人员称呼，用于工单复查要求文案。"""
+    return "质检员" if assignee_role == "quality_inspector" else "安全员"
+
 
 class WorkOrderAgent:
     name = "WorkOrderAgent"
 
+    def __init__(self, rules: dict[str, dict[str, object]] | None = None) -> None:
+        self.rules = rules if rules is not None else RULES
+
     def run(self, state: WorkflowState) -> dict[str, object]:
         hazard = (state.get("hazards") or [{}])[0]
-        rule = RULES.get(str(hazard.get("hazard_type", "")), {"assignee_role": "safety_officer", "deadline_hours": 24, "requirements": ["按安全员要求完成整改"]})
+        rule = self.rules.get(str(hazard.get("hazard_type", "")), {"assignee_role": "safety_officer", "deadline_hours": 24, "requirements": ["按安全员要求完成整改"]})
         now = datetime.now(timezone.utc)
         requirements = [str(item) for item in rule.get("requirements", [])]
         risk_level = str(hazard.get("risk_level", state.get("risk_level", "medium")))
+        assignee_role = str(rule.get("assignee_role", "safety_officer"))
         draft = {
             "task_id": state.get("task_id", ""),
             "incident_id": "",
@@ -29,9 +47,9 @@ class WorkOrderAgent:
             "risk_level": risk_level,
             "location": state.get("location", ""),
             "deadline": (now + timedelta(hours=int(rule.get("deadline_hours", 24)))).isoformat(),
-            "assignee_role": str(rule.get("assignee_role", "safety_officer")),
+            "assignee_role": assignee_role,
             "rectification_requirements": requirements,
-            "review_requirements": ["整改完成后上传现场照片并由安全员复查"],
+            "review_requirements": [f"整改完成后上传现场照片并由{_reviewer_label(assignee_role)}复查"],
             "worker_message": "",
             "ai_generated": True,
             "confirmed_by_human": False,

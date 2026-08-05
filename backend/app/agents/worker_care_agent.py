@@ -9,8 +9,9 @@ from app.workflow.state import WorkflowState
 class WorkerCareAgent:
     name = "WorkerCareAgent"
 
-    def __init__(self, provider: TextProvider) -> None:
+    def __init__(self, provider: TextProvider, role: str = "安全员") -> None:
         self.provider = provider
+        self.role = role
 
     def run(self, state: WorkflowState) -> dict[str, object]:
         started = datetime.now(timezone.utc)
@@ -20,6 +21,7 @@ class WorkerCareAgent:
                 "risk_level": draft.get("risk_level", state.get("risk_level", "medium")),
                 "hazard_name": (state.get("hazards") or [{}])[0].get("hazard_name", "现场隐患"),
                 "requirements": draft.get("rectification_requirements", []),
+                "role": self.role,
             }
         )
         draft["worker_message"] = message

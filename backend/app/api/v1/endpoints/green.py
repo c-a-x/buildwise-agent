@@ -5,7 +5,8 @@ from app.api.dependencies import ensure_project_access, get_current_user
 from app.api.response import ok
 from app.db.session import get_db
 from app.models import User
-from app.schemas.green import GreenAnalyzeForm
+from app.providers.carbon import reference_library
+from app.schemas.green import GreenAnalyzeForm, GreenReference, ReferenceGroupRead, ReferenceMetricRead
 from app.services.carbon_service import CarbonService
 from app.services.project_service import ProjectService
 
@@ -15,7 +16,7 @@ router = APIRouter(prefix="/green", tags=["绿色建造"])
 
 @router.get("/status")
 def status(http_request: Request, user: User = Depends(get_current_user)):
-    return ok({"key": "green", "name": "绿色建造分析", "agent_name": "GreenAgent", "status": "available", "description": "碳排核算核心：GB/T 51366-2019 因子法计算施工阶段 A1-A3/A4/A5 分阶段碳排放。", "planned_inputs": ["材料清单与用量", "运输记录", "施工能耗"], "planned_outputs": ["阶段碳排统计", "面积强度", "减排建议", "报告预览"], "available_endpoints": ["POST /api/v1/green/analyze", "GET /api/v1/green/analyses", "GET /api/v1/green/factors"]}, http_request)
+    return ok({"key": "green", "name": "绿色建造分析", "agent_name": "GreenAgent", "status": "available", "description": "碳排核算核心：GB/T 51366-2019 因子法计算施工阶段 A1-A3/A4/A5 分阶段碳排放。", "planned_inputs": ["材料清单与用量", "运输记录", "施工能耗"], "planned_outputs": ["阶段碳排统计", "面积强度", "减排建议", "报告预览"], "available_endpoints": ["POST /api/v1/green/analyze", "GET /api/v1/green/analyses", "GET /api/v1/green/factors", "GET /api/v1/green/reference"]}, http_request)
 
 
 @router.post("/analyze")
@@ -63,3 +64,19 @@ def benchmark(http_request: Request, project_id: str | None = Query(None), user:
 @router.get("/factors")
 def factors(http_request: Request, user: User = Depends(get_current_user)):
     return ok([factor.model_dump(mode="json") for factor in CarbonService.factors()], http_request)
+
+
+@router.get("/reference")
+def reference(http_request: Request, user: User = Depends(get_current_user)):
+    """中国建筑等公开披露的真实数据参考库（来源可核验），供对标参考、不参与本项目 z-score。"""
+    library = reference_library()
+    groups = [
+        ReferenceGroupRead(
+            category=group.category,
+            name=group.name,
+            items=[ReferenceMetricRead(**item.__dict__) for item in group.items],
+        )
+        for group in library.groups
+    ]
+    payload = GreenReference(version=library.version, updated_at=library.updated_at, source_note=library.source_note, groups=groups)
+    return ok(payload.model_dump(mode="json"), http_request)

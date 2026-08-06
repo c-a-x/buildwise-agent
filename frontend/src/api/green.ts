@@ -1,6 +1,6 @@
 import http from './http'
 import type { ApiEnvelope } from '@/types/api'
-import type { CarbonAnalysisResult, CarbonAnalysisSummary, GreenAnalyzeForm, GreenBenchmark, GreenFactor } from '@/types/green'
+import type { CarbonAnalysisResult, CarbonAnalysisSummary, GreenAnalyzeForm, GreenBenchmark, GreenFactor, GreenReference } from '@/types/green'
 
 export const greenApi = {
   async analyze(payload: GreenAnalyzeForm): Promise<CarbonAnalysisResult> {
@@ -25,6 +25,10 @@ export const greenApi = {
   },
   async benchmark(projectId?: string): Promise<GreenBenchmark> {
     const response = await http.get<ApiEnvelope<GreenBenchmark>>('/green/benchmark', { params: projectId ? { project_id: projectId } : {} })
+    return response.data.data
+  },
+  async reference(): Promise<GreenReference> {
+    const response = await http.get<ApiEnvelope<GreenReference>>('/green/reference')
     return response.data.data
   },
 }

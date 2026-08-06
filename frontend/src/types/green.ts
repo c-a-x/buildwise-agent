@@ -115,3 +115,26 @@ export interface GreenBenchmark {
   current: BenchmarkItem | null
   items: BenchmarkItem[]
 }
+
+export interface ReferenceMetric {
+  code: string
+  name: string
+  value: string
+  unit: string
+  year: number | null
+  source: string
+  note: string
+}
+
+export interface ReferenceGroup {
+  category: string
+  name: string
+  items: ReferenceMetric[]
+}
+
+export interface GreenReference {
+  version: string
+  updated_at: string
+  source_note: string
+  groups: ReferenceGroup[]
+}

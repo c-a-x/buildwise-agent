@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 from app.core.config import settings
@@ -67,6 +68,26 @@ def seed_database() -> None:
             user = by_username[username]
             if not db.query(ProjectMember).filter(ProjectMember.project_id == project.id, ProjectMember.user_id == user.id).first():
                 db.add(ProjectMember(id=new_id("MEM"), project_id=project.id, user_id=user.id, project_role=project_role))
+        # 中国建筑公开披露的代表性真实项目（增强演示真实感）。created_at 回填到竣工/封顶年份，
+        # 保证项目列表按 created_at desc 排序后 PRJ-001 仍是默认当前项目，不影响演示主流程。
+        manager = by_username["manager"]
+        real_projects = [
+            ("PRJ-002", "REAL-002", "北京中信大厦（中国尊）", "北京市朝阳区光华路 CBD", "中国建筑承建代表作：总高 528 米、总建筑面积约 43.7 万平方米，中信集团总部大楼，中建股份—中建三局联合体施工总承包，2018 年移交。来源：公开项目资料。", 2018),
+            ("PRJ-003", "REAL-003", "深圳平安金融中心", "深圳市福田区", "中建一局（中国建筑旗下）施工总承包：最终高度 599.1 米，2016 年全面竣工。来源：公开项目资料。", 2016),
+            ("PRJ-004", "REAL-004", "广州周大福金融中心（广州东塔）", "广州市天河区珠江新城", "中国建筑股份有限公司施工总承包（中建三局、中建四局联合承建）：总高 530 米，2014 年封顶。来源：公开项目资料。", 2014),
+        ]
+        for project_id, code, name, address, description, completed_year in real_projects:
+            real = db.get(Project, project_id)
+            if not real:
+                real = Project(id=project_id, code=code, name=name, address=address, description=description, status="active", manager_user_id=manager.id, created_at=datetime(completed_year, 1, 1, tzinfo=timezone.utc))
+                db.add(real)
+            else:
+                real.manager_user_id = manager.id
+            db.flush()
+            for username, project_role in (("manager", "manager"), ("safety", "safety"), ("quality", "quality"), ("worker", "worker")):
+                user = by_username[username]
+                if not db.query(ProjectMember).filter(ProjectMember.project_id == real.id, ProjectMember.user_id == user.id).first():
+                    db.add(ProjectMember(id=new_id("MEM"), project_id=real.id, user_id=user.id, project_role=project_role))
         safety_docs = _ingest_knowledge(db, settings.knowledge_json_path)
         quality_docs = _ingest_knowledge(db, settings.quality_knowledge_json_path)
         db.commit()

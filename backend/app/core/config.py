@@ -88,6 +88,10 @@ class Settings:
         os.getenv("GREEN_FACTORS_PATH", "../data_demo/green/factors.json"),
         "../data_demo/green/factors.json",
     )
+    green_reference_path: Path = _path_from_env(
+        os.getenv("GREEN_REFERENCE_PATH", "../data_demo/green/reference.json"),
+        "../data_demo/green/reference.json",
+    )
     wellbeing_rules_path: Path = _path_from_env(
         os.getenv("WELLBEING_RULES_PATH", "../data_demo/wellbeing/rules.json"),
         "../data_demo/wellbeing/rules.json",

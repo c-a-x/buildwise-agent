@@ -10,7 +10,7 @@ import CarbonRing from '@/components/green/CarbonRing.vue'
 import { useGreenStore } from '@/stores/green'
 import { useProjectStore } from '@/stores/project'
 import { formatDateTime } from '@/utils/date'
-import type { CarbonAnalysisResult, GreenBenchmark, GreenFactor, GreenItemInput } from '@/types/green'
+import type { CarbonAnalysisResult, GreenBenchmark, GreenFactor, GreenItemInput, GreenReference } from '@/types/green'
 
 type Category = 'material' | 'energy' | 'transport'
 interface ItemRow { code: string; name: string; quantity: number; unit: string }
@@ -24,6 +24,9 @@ const rows = reactive<Record<Category, ItemRow[]>>({ material: [], energy: [], t
 const result = computed<CarbonAnalysisResult | null>(() => green.currentResult)
 const benchmark = ref<GreenBenchmark | null>(null)
 const benchmarkLoading = ref(false)
+const reference = ref<GreenReference | null>(null)
+const referenceLoading = ref(false)
+const referenceError = ref('')
 
 watch(
   [result, () => projects.currentProject?.id],
@@ -152,10 +155,20 @@ function fmtZ(z: number): string { return `z=${z >= 0 ? '+' : ''}${z.toFixed(2)}
 
 function pct(share: number): string { return `${Math.round(share * 100)}%` }
 
+async function loadReference(): Promise<void> {
+  referenceLoading.value = true
+  referenceError.value = ''
+  try {
+    reference.value = await greenApi.reference()
+  } catch (cause) { referenceError.value = getApiError(cause) }
+  finally { referenceLoading.value = false }
+}
+
 onMounted(async () => {
   if (!projects.projects.length) await projects.loadProjects()
   await green.loadFactors()
   await green.loadAnalyses(projects.currentProject?.id)
+  await loadReference()
 })
 </script>
 
@@ -295,6 +308,33 @@ onMounted(async () => {
       </div>
     </div>
 
+    <section class="card reference-card">
+      <div class="card-head">
+        <div><p class="section-kicker">REAL-WORLD REFERENCE</p><h3>真实公开数据参考 · 中国建筑</h3></div>
+        <span v-if="reference" class="status-pill success"><span class="status-dot online" />真实披露 · v{{ reference.version }}</span>
+      </div>
+      <p v-if="referenceError" class="error-text">{{ referenceError }}</p>
+      <div v-else-if="referenceLoading" class="loading-dots">正在加载公开披露数据</div>
+      <template v-else-if="reference">
+        <p class="reference-note">{{ reference.source_note }}</p>
+        <div class="reference-groups">
+          <div v-for="group in reference.groups" :key="group.category" class="reference-group">
+            <p class="reference-group-title">{{ group.name }}</p>
+            <div class="reference-items">
+              <div v-for="item in group.items" :key="item.code" class="reference-item">
+                <p class="reference-item-name">{{ item.name }}</p>
+                <p class="reference-item-value"><strong>{{ item.value }}</strong> <span v-if="item.unit" class="reference-item-unit">{{ item.unit }}</span></p>
+                <p v-if="item.note" class="reference-item-note">{{ item.note }}</p>
+                <p class="reference-item-source mono">{{ item.source }}<template v-if="item.year"> · {{ item.year }}</template></p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="helper-text">数据来源为中国建筑公开报告，供真实对标参考，不参与本项目 z-score 排名。</p>
+      </template>
+      <p v-else class="muted-copy">暂无公开参考数据。</p>
+    </section>
+
     <section class="card history-card">
       <div class="card-head"><div><p class="section-kicker">HISTORY</p><h3>核算历史</h3></div><span class="mono">{{ green.analyses.length }} 条</span></div>
       <div v-if="green.loadingList" class="table-wrap"><div class="loading-dots">正在加载历史</div></div>
@@ -350,6 +390,18 @@ onMounted(async () => {
 .factor-version { font-family: 'Fira Code', monospace; font-size: 14px !important; }
 .report-pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-soft); font-family: 'Fira Code', monospace; font-size: 11px; line-height: 1.8; }
 .history-card { margin-top: 18px; }
+.reference-card { margin-top: 18px; }
+.reference-note { margin: 0 0 14px; color: var(--text-soft); font-size: 12px; line-height: 1.7; }
+.reference-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.reference-group { border: 1px solid var(--line); border-radius: 10px; padding: 14px; background: var(--surface-soft, #f8fafb); }
+.reference-group-title { margin: 0 0 10px; font-size: 12px; font-weight: 700; color: var(--text); }
+.reference-items { display: grid; gap: 10px; }
+.reference-item { display: grid; gap: 2px; }
+.reference-item-name { margin: 0; font-size: 11px; color: var(--muted); }
+.reference-item-value { margin: 0; font-size: 15px; color: var(--text); font-variant-numeric: tabular-nums; }
+.reference-item-unit { font-size: 11px; color: var(--muted); font-weight: 400; }
+.reference-item-note { margin: 0; font-size: 11px; color: var(--text-soft); line-height: 1.6; }
+.reference-item-source { margin: 2px 0 0; font-size: 10px; color: var(--muted); }
 .align-right { text-align: right; }
 @media (max-width: 900px) { .item-row { grid-template-columns: minmax(0, 1fr) 68px 34px 32px; } }
 @media (max-width: 640px) { .result-tiles { grid-template-columns: 1fr; } }

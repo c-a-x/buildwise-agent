@@ -125,3 +125,30 @@ class FactorRead(BaseModel):
     year: int | None = None
     verified: bool = False
     note: str = ""
+
+
+class ReferenceMetricRead(BaseModel):
+    """单条真实公开数据（如中国建筑 2024 年度 ESG/年报披露）。"""
+
+    code: str
+    name: str
+    value: str
+    unit: str
+    year: int | None = None
+    source: str
+    note: str = ""
+
+
+class ReferenceGroupRead(BaseModel):
+    category: str
+    name: str
+    items: list[ReferenceMetricRead]
+
+
+class GreenReference(BaseModel):
+    """真实公开数据参考库（独立于本项目 z-score 对标，供对标参考）。"""
+
+    version: str
+    updated_at: str
+    source_note: str
+    groups: list[ReferenceGroupRead]

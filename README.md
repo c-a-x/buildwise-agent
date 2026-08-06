@@ -219,6 +219,7 @@ VISION_LLM_PROVIDER=off          # claude_cli | doubao | off
 - **配置**（`backend/.env`）：
   ```env
   GREEN_FACTORS_PATH=../data_demo/green/factors.json
+  GREEN_REFERENCE_PATH=../data_demo/green/reference.json
   ```
 - **接口**：
   | 接口 | 说明 |
@@ -229,6 +230,8 @@ VISION_LLM_PROVIDER=off          # claude_cli | doubao | off
   | `GET /api/v1/green/analyses/{id}/report` | 下载核算 Word 报告（`.docx`，python-docx 生成，缺失时降级为 `.txt`） |
   | `GET /api/v1/green/benchmark` | 同类项目碳排强度 z-score 对标（可按 `project_id` 高亮当前项目） |
   | `GET /api/v1/green/factors` | 排放因子库（含 verified 标记） |
+  | `GET /api/v1/green/reference` | 真实公开数据参考库（中国建筑 2024 年度 ESG/年报披露，来源可核验，独立于 z-score 对标） |
+- **真实公开数据参考**：`data_demo/green/reference.json` 收录中国建筑股份有限公司公开披露的真实数据（《2024年度环境社会治理可持续发展报告》与《2024年年度报告》，2025-04 发布，可在巨潮资讯/公司官网核验），按 `carbon/energy/green/environment/scale` 分组展示：万元产值碳排放强度同比变化与 2027 目标、范围三排放占比、能源消耗总量、绿色建筑认证与绿色示范工地数量、环保投入、新签合同额/房屋建筑施工面积/营业收入等；每条带 `value/unit/year/source/note` 来源引用，前端「真实公开数据参考 · 中国建筑」卡独立展示，**不参与本项目面积强度 z-score 排名**；修改文件后重启后端生效；
 - **与 safety/quality 的差异**：绿色为表单输入的计算核心，不走图像/五 Agent 闭环（绿色检测闭环规划中）；复用 `carbon_analyses` 表（`requested_by/area_m2/scope/is_simulated/report_preview/factor_version`），条目与分阶段明细存 `result_json`；未命中因子的条目按 0 计并给出警告，不中断请求；
 - **降级规则**：因子库缺失或解析失败时返回空库并提示 `GREEN_FACTORS_PATH` 配置，所有条目按因子缺失处理。
 
@@ -396,6 +399,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test_runbooks.ps1
 | `quality` | `BuildWise123!` | 质检员 |
 | `worker` | `BuildWise123!` | 工人 |
 
+种子数据（`backend/app/db/seed.py`）除默认演示项目「滨江智造中心一期」（PRJ-001，按 `created_at` 倒序仍为默认当前项目）外，另加入 3 个中国建筑公开代表项目作为真实演示项目：**北京中信大厦（中国尊）**（528 米）、**深圳平安金融中心**（599.1 米）、**广州周大福金融中心（广州东塔）**（530 米）——名称与承建信息取自公开项目资料（来源记入项目 `description`），`created_at` 回填到竣工年份；四个演示角色对 4 个项目均可见、可切换做碳排核算与对标。
+
 ## 验证命令
 
 ```powershell
@@ -457,7 +462,7 @@ npm run build
 - AI 只能生成工单草稿，人工确认后才写入正式工单；
 - 日报核心数字来自 SQL 聚合，日报文案可由模板或真实文本 Provider 生成；
 - 质量巡检已接入真实五 Agent 闭环：MBDD2025 训练的 YOLO 五类缺陷检测（模型缺失时降级 `quality_mock` 并标记 `is_simulated=true`），质量工单由质检员确认；
-- 绿色建造已接入碳排核算核心：GB/T 51366-2019 因子法计算 A1-A3/A4/A5 分阶段排放（演示因子 `verified=false` 时 `is_simulated=true`），绿色五 Agent 检测闭环和真实碳排数据源仍为后续阶段；
+- 绿色建造已接入碳排核算核心：GB/T 51366-2019 因子法计算 A1-A3/A4/A5 分阶段排放（演示因子 `verified=false` 时 `is_simulated=true`），并展示中国建筑公开披露的真实参考数据（`GET /green/reference`，来源可核验、独立于 z-score 对标）；绿色五 Agent 检测闭环和经核证的真实因子库仍为后续阶段；
 - 工友关怀已接入高温关怀闭环：CareAgent 按《防暑降温措施管理办法》分级计算中暑风险与温馨提醒（规则库缺失时 `is_simulated=true`），天气 API 可选、未配置时回退手动输入，红色高温联动语音广播；
 - 工单列表展示负责人姓名（`assignee_name`），未指派时回退显示负责人 ID；
 - 知识库提供统一 RAG 问答（`POST /knowledge/chat`），默认离线拼装、LLM 可选且失败自动降级；
@@ -469,6 +474,6 @@ npm run build
 ## 后续路线
 
 - 为 `QualityAgent` 接入真实质量巡检数据源；
-- 为 `GreenAgent` 接入真实材料和碳排数据源；
+- 为 `GreenAgent` 接入经核证的真实排放因子库与更细颗粒度碳排数据源；
 - 为 `CareAgent` 接入真实天气数据源与定时关怀提醒，增加工友反馈问卷与幸福指数统计；
 - 面向生产环境迁移 PostgreSQL、对象存储、HTTPS、集中日志和速率限制。

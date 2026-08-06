@@ -32,6 +32,7 @@ export type IconName =
   | 'download'
   | 'mic'
   | 'camera'
+  | 'speaker'
 
 const props = withDefaults(defineProps<{ name: IconName; size?: number }>(), { size: 18 })
 </script>
@@ -72,5 +73,6 @@ const props = withDefaults(defineProps<{ name: IconName; size?: number }>(), { s
     <template v-else-if="props.name === 'download'"><path d="M12 4v11M7 11l5 5 5-5M5 20h14" /></template>
     <template v-else-if="props.name === 'mic'"><rect x="8" y="3" width="8" height="12" rx="4" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" /></template>
     <template v-else-if="props.name === 'camera'"><path d="M3 8h3l2-3h8l2 3h3v12H3V8Z" /><circle cx="12" cy="13" r="3.5" /></template>
+    <template v-else-if="props.name === 'speaker'"><path d="M4 10v4h3l5 4V6l-5 4H4Z" /><path d="M16 8.5a4.5 4.5 0 0 1 0 7M18.5 6a8 8 0 0 1 0 12" /></template>
   </svg>
 </template>

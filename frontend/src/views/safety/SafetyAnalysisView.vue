@@ -18,6 +18,7 @@ import { useSafetyStore } from '@/stores/safety'
 import { formatDateTime } from '@/utils/date'
 import { riskLabel } from '@/utils/risk'
 import { taskIdFromQuery } from '@/utils/safetyHistory'
+import { isAnnounceableHazard, speakHazards, ttsSupported, unlockTts } from '@/lib/ttsBroadcast'
 
 const route = useRoute()
 const projects = useProjectStore()
@@ -51,6 +52,7 @@ const visionLabel = computed(() => {
   return `模型在线 · ${parts.length ? parts.join(' + ') : vision}`
 })
 const isOfflineSimulated = computed(() => !result.value || result.value.is_simulated)
+const broadcastOn = ref(true) // 单张分析出高危时语音播报开关
 
 // 隐患按来源拆分：YOLO/mock 归「识别到的隐患」，LLM 归「深度分析」专属卡片
 const yoloHazards = computed(() => (result.value?.hazards ?? []).filter((hazard) => hazard.source !== 'llm'))
@@ -160,9 +162,19 @@ async function analyze(): Promise<void> {
   localError.value = ''
   if (!file.value) { localError.value = '请先选择一张现场图片'; return }
   if (!projects.currentProject?.id) { localError.value = '当前没有可用项目'; return }
+  unlockTts() // 用户手势内预热语音合成，分析耗时后播报不被浏览器拦截
   try {
     await safety.analyze(file.value, { project_id: projects.currentProject.id, location: location.value, work_type: workType.value, description: description.value })
+    announceResult()
   } catch (cause) { localError.value = getApiError(cause) }
+}
+
+/** 分析结果含高危隐患时语音播报隐患名。 */
+function announceResult(): void {
+  if (!broadcastOn.value) return
+  const current = safety.currentResult
+  if (!current) return
+  speakHazards(current.hazards.filter(isAnnounceableHazard).map((hazard) => hazard.hazard_name))
 }
 
 async function confirmOrder(): Promise<void> {
@@ -180,7 +192,7 @@ function confidence(value: number): string { return `${Math.round(value * 100)}%
 </script>
 
 <template>
-  <div><AppPageHeader eyebrow="SAFETY INTELLIGENCE" title="现场安全分析" description="上传施工现场图片，让五个离线 Agent 协同完成识别、检索、任务和日报预览。"><template #actions><span class="status-pill dark"><span class="status-dot online" />{{ visionLabel }}</span></template></AppPageHeader>
+  <div><AppPageHeader eyebrow="SAFETY INTELLIGENCE" title="现场安全分析" description="上传施工现场图片，让五个离线 Agent 协同完成识别、检索、任务和日报预览。"><template #actions><span class="status-pill dark"><span class="status-dot online" />{{ visionLabel }}</span><button v-if="ttsSupported()" type="button" class="broadcast-toggle" :class="{ on: broadcastOn }" @click="broadcastOn = !broadcastOn"><AppIcon name="speaker" :size="14" />语音播报</button></template></AppPageHeader>
     <div class="safety-layout">
       <section class="card input-panel"><div class="card-head"><div><p class="section-kicker">01 · INPUT</p><h3>准备一次现场分析</h3></div><span class="mono">120s timeout</span></div><div class="form-grid">
         <div class="form-field"><label>当前项目</label><select :value="projects.currentProject?.id" @change="selectProject"><option v-for="project in projects.projects" :key="project.id" :value="project.id">{{ project.name }}</option></select></div>
@@ -209,6 +221,9 @@ function confidence(value: number): string { return `${Math.round(value * 100)}%
 </template>
 
 <style scoped>
+.broadcast-toggle { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; color: var(--text-soft); background: #fff; font-size: 11px; font-weight: 800; cursor: pointer; transition: border-color var(--ease), color var(--ease), background var(--ease); }
+.broadcast-toggle:hover { border-color: var(--blue); color: var(--blue); }
+.broadcast-toggle.on { border-color: var(--blue); color: #fff; background: var(--blue); }
 .sample-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .sample-card { display: grid; gap: 4px; border: 1px solid var(--line); border-radius: 9px; padding: 6px; background: #fff; text-align: left; cursor: pointer; transition: border-color var(--ease), transform var(--ease); }
 .sample-card:hover { border-color: var(--blue); transform: translateY(-1px); }

@@ -10,6 +10,7 @@ import AlarmBanner from '@/components/safety/AlarmBanner.vue'
 import RealtimeSourcePicker from '@/components/safety/RealtimeSourcePicker.vue'
 import { useAlarm } from '@/composables/useAlarm'
 import { useRealtimeDetection } from '@/composables/useRealtimeDetection'
+import { unlockTts } from '@/lib/ttsBroadcast'
 import { riskLabel } from '@/utils/risk'
 
 const detection = useRealtimeDetection()
@@ -39,6 +40,7 @@ const providerLabel = computed(() => {
 onMounted(() => start())
 
 function toggleRunning(): void {
+  unlockTts() // 用户手势内预热语音合成，避免后续报警播报被浏览器拦截
   if (running.value) stop()
   else start()
 }

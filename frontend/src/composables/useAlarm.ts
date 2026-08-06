@@ -1,18 +1,13 @@
-/** 隐患软报警状态机：去抖触发/解除 + Web Audio 蜂鸣联动。 */
+/** 隐患软报警状态机：去抖触发/解除 + Web Audio 蜂鸣 + 语音播报联动。 */
 
 import { onUnmounted, ref, watch } from 'vue'
 
 import { ensureAlertAudio, startAlert, stopAlert } from '@/lib/alarmSound'
+import { isAnnounceableHazard, speakHazards, stopBroadcast, unlockTts } from '@/lib/ttsBroadcast'
 import type { DetectFrameHazard } from '@/types/safety'
 
-const HIGH_RISK = new Set(['high', 'critical'])
-const VIOLATIONS = new Set(['no_helmet', 'no_mask', 'no_safety_vest'])
 const TRIGGER_STREAK = 2 // 连续 N 帧高危才触发，避免单帧误报
 const CLEAR_STREAK = 3 // 连续 N 帧正常才解除
-
-function isWorthy(hazard: DetectFrameHazard): boolean {
-  return HIGH_RISK.has(hazard.risk_level) || VIOLATIONS.has(hazard.hazard_type)
-}
 
 export function useAlarm() {
   const alarmEnabled = ref(true)
@@ -24,13 +19,16 @@ export function useAlarm() {
 
   function evaluate(hazards: DetectFrameHazard[]): void {
     if (!alarmEnabled.value) return
-    if (hazards.some(isWorthy)) {
+    if (hazards.some(isAnnounceableHazard)) {
       highStreak += 1
       normalStreak = 0
       if (highStreak >= TRIGGER_STREAK && !active.value) {
         active.value = true
-        alarmHazards.value = hazards.filter(isWorthy)
-        if (!muted.value) startAlert()
+        alarmHazards.value = hazards.filter(isAnnounceableHazard)
+        if (!muted.value) {
+          startAlert()
+          speakHazards(alarmHazards.value.map((hazard) => hazard.hazard_name))
+        }
       }
     } else {
       normalStreak += 1
@@ -39,6 +37,7 @@ export function useAlarm() {
         active.value = false
         alarmHazards.value = []
         stopAlert()
+        stopBroadcast()
       }
     }
   }
@@ -49,6 +48,7 @@ export function useAlarm() {
     highStreak = 0
     normalStreak = 0
     stopAlert()
+    stopBroadcast()
   }
 
   // 开关关闭立即解除并静音
@@ -56,13 +56,17 @@ export function useAlarm() {
     if (!enabled) reset()
   })
 
-  // 静音切换：仅当报警中才需要启停声音
+  // 静音切换：仅当报警中才需要启停声音/语音
   watch(muted, (isMuted) => {
     if (!active.value) return
-    if (isMuted) stopAlert()
-    else {
+    if (isMuted) {
+      stopAlert()
+      stopBroadcast()
+    } else {
       ensureAlertAudio()
+      unlockTts()
       startAlert()
+      speakHazards(alarmHazards.value.map((hazard) => hazard.hazard_name))
     }
   })
 

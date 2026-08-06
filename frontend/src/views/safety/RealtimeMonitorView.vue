@@ -3,6 +3,8 @@
 
 import { computed, onMounted, watch } from 'vue'
 
+import { getApiError } from '@/api/http'
+import { safetyApi } from '@/api/safety'
 import AppIcon from '@/components/common/AppIcon.vue'
 import AppPageHeader from '@/components/common/AppPageHeader.vue'
 import AppState from '@/components/common/AppState.vue'
@@ -11,12 +13,14 @@ import RealtimeSourcePicker from '@/components/safety/RealtimeSourcePicker.vue'
 import { useAlarm } from '@/composables/useAlarm'
 import { useRealtimeDetection } from '@/composables/useRealtimeDetection'
 import { unlockTts } from '@/lib/ttsBroadcast'
+import { useAppStore } from '@/stores/app'
 import { riskLabel } from '@/utils/risk'
 
 const detection = useRealtimeDetection()
 const { analyzing, running, error, lastResult, framesAnalyzed, lastLatencyMs, start, stop } = detection
 const alarm = useAlarm()
 const { active: alarmActive, alarmEnabled, muted, alarmHazards, evaluate, reset } = alarm
+const app = useAppStore()
 
 // 模型可用才评估报警；不可用（降级为仅显示）立即解除
 watch(lastResult, (result) => {
@@ -45,6 +49,21 @@ function toggleRunning(): void {
   else start()
 }
 
+// 向网络音响/PA webhook 推送一条测试播报，验证接线
+async function testBroadcast(): Promise<void> {
+  try {
+    const result = await safetyApi.broadcastTest()
+    const ttsLabel = result.tts.available
+      ? result.tts.is_simulated
+        ? 'TTS 生效（模拟音频）'
+        : 'TTS 生效（真实音频）'
+      : '未配置 TTS（仅文字）'
+    app.showNotice(result.delivered ? `广播已送达 · ${ttsLabel}` : `广播未送达 · ${ttsLabel}`)
+  } catch (cause) {
+    app.showNotice(getApiError(cause))
+  }
+}
+
 // 视频源切换后清空上一源的检测结果，避免旧检测框残留在新画面上
 function onSourceChange(): void {
   detection.reset()
@@ -54,7 +73,10 @@ function onSourceChange(): void {
 <template>
   <div>
     <AppPageHeader eyebrow="REALTIME SAFETY" title="实时监控" description="接入 ESP32-CAM / USB 摄像头 / 演示画面，逐帧进行 YOLO 隐患检测，高危违规自动触发软报警。">
-      <template #actions><span class="status-pill" :class="lastResult?.available === false ? 'warning' : 'dark'"><span class="status-dot" :class="lastResult?.available === false ? '' : 'online'" />{{ providerLabel }}</span></template>
+      <template #actions>
+        <button type="button" class="broadcast-toggle" title="向配置的网络音响/PA 推送测试播报" @click="testBroadcast"><AppIcon name="speaker" :size="14" />测试广播</button>
+        <span class="status-pill" :class="lastResult?.available === false ? 'warning' : 'dark'"><span class="status-dot" :class="lastResult?.available === false ? '' : 'online'" />{{ providerLabel }}</span>
+      </template>
     </AppPageHeader>
 
     <AlarmBanner
@@ -103,6 +125,8 @@ function onSourceChange(): void {
 </template>
 
 <style scoped>
+.broadcast-toggle { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; color: var(--text-soft); background: #fff; font-size: 11px; font-weight: 800; cursor: pointer; transition: border-color var(--ease), color var(--ease), background var(--ease); }
+.broadcast-toggle:hover { border-color: var(--blue); color: var(--blue); }
 .realtime-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; margin-top: 18px; }
 @media (max-width: 1080px) { .realtime-layout { grid-template-columns: 1fr; } }
 .stage-card { min-width: 0; }

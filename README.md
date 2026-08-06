@@ -270,6 +270,17 @@ VISION_LLM_PROVIDER=off          # claude_cli | doubao | off
 ALERT_WEBHOOK_URL=http://192.168.1.50/api/alert
 ```
 
+**语音广播到网络音响/PA（可选，默认禁用）**：检测到 high/critical 隐患时，后端经 `BackgroundTasks` 后台 `POST` 到 `BROADCAST_WEBHOOK_URL`，payload 同时携带**中文文字**（`message`，如"警告！检测到未佩戴安全帽，请立即整改。"）与**可选 mp3 音频**（`audio_base64`）。降级优先：未配置 TTS 或合成失败时只推文字（设备自带 TTS 时即可发声），绝不阻塞检测主链路。设备侧接收 HTTP 服务的固件/API 不在本仓库。
+
+```env
+# backend/.env —— 未配置则广播禁用
+BROADCAST_WEBHOOK_URL=http://192.168.1.60/api/tts
+TTS_PROVIDER=off    # off=只推文字（设备自己念）；edge_tts=后端合成 mp3（需外网，pip install edge-tts）；mock=占位音频演示
+TTS_VOICE=zh-CN-XiaoxiaoNeural
+```
+
+可在前端实时监控页点「测试广播」或 `POST /api/v1/safety/broadcast-test`（需登录）验证接线，返回送达状态与 TTS 生效情况。浏览器本地播报（监控电脑）与远程 PA 广播是两条独立通道，互不影响。
+
 ## 工友助手（worker care）
 
 「工友助手」页（`/worker-care`）把专业整改要求转成尊重、简短、可执行的现场提醒，回答由规范知识库 RAG 检索生成（内嵌《来源·条款》，高风险项提示暂停作业），未命中时回退本地模板，不替代安全员判断。

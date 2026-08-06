@@ -19,6 +19,7 @@ from app.providers.vision.mapping import compute_risk_level
 from app.providers.vision.yolo import YOLODetector, last_error
 from app.schemas.safety import DetectFrameHazard, DetectFrameResponse
 from app.services.alert_service import notify_hard_alert
+from app.services.broadcast_service import broadcast_voice_alert, send_test_broadcast
 from app.services.safety_service import SafetyService
 from app.utils.files import validate_upload
 from app.utils.ids import new_id
@@ -80,8 +81,12 @@ def detect_frame(
     ]
     risk_level = compute_risk_level(raw_hazards)
     # ESP32 硬报警（预留）：高危且配置了 webhook 时后台通知，默认空禁用
-    if risk_level in ("high", "critical") and settings.alert_webhook_url:
-        background_tasks.add_task(notify_hard_alert, raw_hazards, settings.alert_webhook_url)
+    if risk_level in ("high", "critical"):
+        if settings.alert_webhook_url:
+            background_tasks.add_task(notify_hard_alert, raw_hazards, settings.alert_webhook_url)
+        # 网络音响/PA 语音广播（预留）：高危时后台推送文字 + 可选音频，默认空禁用
+        if settings.broadcast_webhook_url:
+            background_tasks.add_task(broadcast_voice_alert, raw_hazards, settings)
     return ok(
         DetectFrameResponse(
             available=True,
@@ -94,6 +99,15 @@ def detect_frame(
         http_request,
         "实时检测完成",
     )
+
+
+@router.post("/broadcast-test")
+def broadcast_test(http_request: Request, user: User = Depends(get_current_user)):
+    """手动触发一次语音广播测试，返回送达与 TTS 状态，用于接线验证。"""
+    result = send_test_broadcast(settings)
+    if result["delivered"]:
+        return ok(result, http_request, "测试广播已送达")
+    return ok(result, http_request, result["reason"] or "测试广播未送达")
 
 
 def _is_allowed_proxy_url(url: str) -> bool:

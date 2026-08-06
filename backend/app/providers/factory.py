@@ -10,6 +10,9 @@ from app.providers.speech.openai_compatible import OpenAICompatibleSpeechProvide
 from app.providers.text.base import TextProvider
 from app.providers.text.openai_compatible import OpenAICompatibleTextProvider
 from app.providers.text.template import TemplateTextProvider
+from app.providers.tts.base import SpeechSynthesisProvider
+from app.providers.tts.edge_tts import EdgeTTSSpeechProvider
+from app.providers.tts.mock import MockTTSSpeechProvider
 from app.providers.vision.base import VisionProvider
 from app.providers.vision.hybrid import SafetyHybridVisionProvider
 from app.providers.vision.mock import MockVisionProvider
@@ -88,3 +91,16 @@ def build_speech_provider(settings: Settings) -> SpeechTranscriptionProvider:
         "PROVIDER_NOT_CONFIGURED",
         500,
     )
+
+
+def build_tts_provider(settings: Settings) -> SpeechSynthesisProvider | None:
+    """构建语音合成 Provider；未配置（off）时返回 None，广播仍走文字通道。
+
+    与 build_speech_provider 不同：TTS 是可选增强，不配置/失败都不抛错，
+    由广播服务降级为只推文字（设备自行 TTS）。
+    """
+    if settings.tts_provider == "edge_tts":
+        return EdgeTTSSpeechProvider(voice=settings.tts_voice)
+    if settings.tts_provider == "mock":
+        return MockTTSSpeechProvider()
+    return None

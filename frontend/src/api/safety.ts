@@ -10,6 +10,13 @@ export interface SafetyAnalyzePayload {
   demo_scenario?: string
 }
 
+export interface BroadcastTestResult {
+  delivered: boolean
+  message: string
+  tts: { provider: string | null; available: boolean; is_simulated: boolean }
+  reason: string | null
+}
+
 export const safetyApi = {
   async analyze(file: File, payload: SafetyAnalyzePayload): Promise<SafetyAnalysisResult> {
     const form = new FormData()
@@ -33,6 +40,11 @@ export const safetyApi = {
     const form = new FormData()
     form.append('image', file, 'frame.jpg')
     const response = await http.post<ApiEnvelope<DetectFrameResult>>('/safety/detect-frame', form, { timeout: timeoutMs })
+    return response.data.data
+  },
+  // 语音广播测试：向配置的网络音响/PA webhook 推送一条测试播报，返回送达与 TTS 状态
+  async broadcastTest(): Promise<BroadcastTestResult> {
+    const response = await http.post<ApiEnvelope<BroadcastTestResult>>('/safety/broadcast-test')
     return response.data.data
   },
 }

@@ -10,6 +10,7 @@ from app.core.config import settings
 from app.db.session import get_db
 from app.models import AuditLog, Upload, User, WorkOrderEvent
 from app.schemas.work_order import WorkOrderCreate, WorkOrderStatusUpdate
+from app.services.audit_service import client_ip
 from app.services.work_order_service import WorkOrderService
 from app.utils.files import save_upload
 from app.utils.ids import new_id
@@ -21,7 +22,7 @@ router = APIRouter(prefix="/work-orders", tags=["整改工单"])
 @router.post("")
 def create_order(request: WorkOrderCreate, http_request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     service = WorkOrderService(db)
-    order = service.create(request, user)
+    order = service.create(request, user, ip_address=client_ip(http_request))
     return ok(service.serialize(order), http_request, "工单已确认创建")
 
 
@@ -52,7 +53,7 @@ def get_order(order_id: str, http_request: Request, user: User = Depends(get_cur
 @router.patch("/{order_id}/status")
 def update_status(order_id: str, request: WorkOrderStatusUpdate, http_request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     service = WorkOrderService(db)
-    order = service.update_status(order_id, request, user)
+    order = service.update_status(order_id, request, user, ip_address=client_ip(http_request))
     return ok(service.serialize(order), http_request, "工单状态已更新")
 
 
@@ -80,6 +81,6 @@ async def attach(order_id: str, http_request: Request, attachment: UploadFile = 
     db.add(upload)
     db.flush()
     db.add(WorkOrderEvent(id=new_id("WEO"), work_order_id=order.id, actor_user_id=user.id, event_type="attachment_added", from_status=order.status, to_status=order.status, note="上传整改附件", attachment_upload_id=upload.id))
-    db.add(AuditLog(id=new_id("AUD"), user_id=user.id, action="attach_work_order_image", resource_type="work_order", resource_id=order.id, detail_json={"upload_id": upload.id}))
+    db.add(AuditLog(id=new_id("AUD"), user_id=user.id, action="attach_work_order_image", resource_type="work_order", resource_id=order.id, detail_json={"upload_id": upload.id}, ip_address=client_ip(http_request)))
     db.commit()
     return ok({"work_order_id": order.id, "upload_id": upload.id, "filename": upload.original_name, "size_bytes": size_bytes, "stored": True, "file_url": f"/storage/{upload.relative_path}"}, http_request, "整改附件已保存")

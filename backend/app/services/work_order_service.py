@@ -25,7 +25,7 @@ class WorkOrderService:
         self.db = db
         self.orders = WorkOrderRepository(db)
 
-    def create(self, request: WorkOrderCreate, actor: User) -> WorkOrder:
+    def create(self, request: WorkOrderCreate, actor: User, ip_address: str | None = None) -> WorkOrder:
         if actor.role not in ALLOWED_MUTATORS:
             raise ForbiddenError("当前角色不能确认或创建工单")
         task = self.db.get(AgentRun, request.task_id)
@@ -75,7 +75,7 @@ class WorkOrderService:
         self.db.add(order)
         self.db.flush()
         self.db.add(WorkOrderEvent(id=new_id("WEO"), work_order_id=order.id, actor_user_id=actor.id, event_type="created", from_status=None, to_status="pending", note="人工确认 AI 工单草稿"))
-        self.db.add(AuditLog(id=new_id("AUD"), user_id=actor.id, action="confirm_work_order", resource_type="work_order", resource_id=order.id, detail_json={"task_id": task.id}))
+        self.db.add(AuditLog(id=new_id("AUD"), user_id=actor.id, action="confirm_work_order", resource_type="work_order", resource_id=order.id, detail_json={"task_id": task.id}, ip_address=ip_address))
         self.db.commit()
         return order
 
@@ -116,7 +116,7 @@ class WorkOrderService:
         self._ensure_project_access(order.project_id, actor)
         return order
 
-    def update_status(self, order_id: str, request: WorkOrderStatusUpdate, actor: User) -> WorkOrder:
+    def update_status(self, order_id: str, request: WorkOrderStatusUpdate, actor: User, ip_address: str | None = None) -> WorkOrder:
         if actor.role not in ALLOWED_MUTATORS:
             raise ForbiddenError("当前角色不能变更工单状态")
         order = self.get(order_id, actor)
@@ -130,7 +130,7 @@ class WorkOrderService:
         if request.status == "closed":
             order.closed_at = datetime.now(timezone.utc)
         self.db.add(WorkOrderEvent(id=new_id("WEO"), work_order_id=order.id, actor_user_id=actor.id, event_type="status_changed", from_status=old_status, to_status=request.status, note=request.note))
-        self.db.add(AuditLog(id=new_id("AUD"), user_id=actor.id, action="change_work_order_status", resource_type="work_order", resource_id=order.id, detail_json={"from": old_status, "to": request.status}))
+        self.db.add(AuditLog(id=new_id("AUD"), user_id=actor.id, action="change_work_order_status", resource_type="work_order", resource_id=order.id, detail_json={"from": old_status, "to": request.status}, ip_address=ip_address))
         self.db.commit()
         return order
 

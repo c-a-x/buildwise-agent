@@ -260,6 +260,19 @@ VISION_LLM_PROVIDER=off          # claude_cli | doubao | off
 - **隐患/缺陷异常检测**（`GET /stats/anomalies`，仪表盘「异常波动检测」卡）：按天统计窗口内（默认 30 天，可切 safety/quality）的 Incident 数量，`z > z_threshold`（默认 2.5）的天标红为异常；空窗口或全零（标准差为 0）时降级显示。模块按 `metadata_json.module` 分拣，`safety` 兼容无 module 键的历史行；
 - **风险评分 0-100**（安全/质量分析结果、工单草稿）：`rules/risk_rules.py::compute_risk_score` 用「隐患类型基准分 × 置信度缩放 + 重大缺陷加分」得到整数分（如 `no_helmet`≈87、`missing_guardrail`≈95）；视觉映射写入、读取接口兜底重算，历史数据也始终有分。
 
+## 权限审计（audit 模块）
+
+「权限审计」页（`/audit`）把关键操作写入 `audit_logs` 审计表，并提供**仅管理员**可见的查询接口：登录/登出、工单确认/状态变更/附图、项目创建均记录操作者、动作、资源与来源 IP，供追溯与合规留痕。
+
+- **埋点范围**：`user_login` / `user_logout`（auth）、`create_project`（projects）、`confirm_work_order` / `change_work_order_status` / `attach_work_order_image`（工单创建、状态流转、附图）；`ip_address` 取请求来源 IP（`request.client.host`）；
+- **查询权限**：`GET /audit/logs` 与 `GET /audit/actions` 仅 `admin` 角色可访问，非管理员返回 403；
+- **接口**：
+  | 接口 | 说明 |
+  | --- | --- |
+  | `GET /api/v1/audit/logs` | 审计日志分页查询（可按 `user_id/action/resource_type/start_at/end_at` 过滤，`limit` 默认 50、最大 200，`offset` 分页），返回 items + total |
+  | `GET /api/v1/audit/actions` | 已记录的去重动作列表，供前端筛选下拉 |
+- **建表**：由 Alembic 迁移 `0008_audit_logs` 创建（真实库升级后保留既有审计行），表结构与 `entities.py` 的 `AuditLog` 模型一致。
+
 ## 实时安全监测与硬件接口
 
 「实时监控」页（`/safety/realtime`）把现场视频源逐帧送入后端 YOLO 检测，浏览器内叠加检测框，检测到高危违规时触发软报警；可选配 ESP32 硬报警（蜂鸣器）。
@@ -377,6 +390,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test_runbooks.ps1
 
 | 账号 | 密码 | 角色 |
 | --- | --- | --- |
+| `admin` | `BuildWise123!` | 管理员 |
 | `manager` | `BuildWise123!` | 项目经理 |
 | `safety` | `BuildWise123!` | 安全员 |
 | `quality` | `BuildWise123!` | 质检员 |
@@ -425,7 +439,7 @@ npm run build
 
 ## 页面与目录
 
-页面和路由覆盖登录、注册、找回密码、仪表盘、项目管理、安全分析、实时监控、安全历史、整改工单、工单详情、工友助手、工友关怀、日报及历史、质量巡检、绿色碳排核算、知识库、个人资料、系统设置，以及 403/404 页面。
+页面和路由覆盖登录、注册、找回密码、仪表盘、项目管理、安全分析、实时监控、安全历史、整改工单、工单详情、工友助手、工友关怀、日报及历史、质量巡检、绿色碳排核算、知识库、权限审计（仅管理员）、个人资料、系统设置，以及 403/404 页面。
 
 - `frontend/`：Vue 3 + TypeScript + Pinia + Vue Router；
 - `backend/`：FastAPI + Pydantic + SQLAlchemy + Alembic + LangGraph；
@@ -449,11 +463,11 @@ npm run build
 - 知识库提供统一 RAG 问答（`POST /knowledge/chat`），默认离线拼装、LLM 可选且失败自动降级；
 - 工友助手回答由规范知识库 RAG 检索生成（内嵌《来源·条款》，未命中回退本地模板），语音输入优先浏览器 Web Speech（zh-CN）本地识别；未配置 ASR Provider 时后端 `/transcribe` 返回 `available=false` 而非报错；
 - 统计分析（碳排强度 z-score 对标、隐患/缺陷异常波动检测、0-100 风险评分）全部为纯 `statistics` 计算，不依赖 numpy/scipy/pandas；
+- 权限审计记录关键操作（登录/登出、工单确认/状态变更/附图、项目创建）与来源 IP，`audit_logs` 由 Alembic 迁移建表，查询接口仅 `admin` 角色可见，非管理员返回 403；
 - 生产环境仍需更换 `SECRET_KEY`、使用 PostgreSQL/对象存储、限制 CORS、启用 HTTPS、集中日志和速率限制。
 
 ## 后续路线
 
-- 接入语音提醒和权限审计；
 - 为 `QualityAgent` 接入真实质量巡检数据源；
 - 为 `GreenAgent` 接入真实材料和碳排数据源；
 - 为 `CareAgent` 接入真实天气数据源与定时关怀提醒，增加工友反馈问卷与幸福指数统计；

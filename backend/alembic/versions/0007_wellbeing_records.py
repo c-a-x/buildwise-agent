@@ -16,7 +16,7 @@ depends_on = None
 
 def upgrade() -> None:
     bind = op.get_bind()
-    tables = {row[0] for row in sa.inspect(bind).get_table_names()}
+    tables = set(sa.inspect(bind).get_table_names())
     if "wellbeing_records" in tables:
         return
     op.create_table(
@@ -35,7 +35,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     bind = op.get_bind()
-    tables = {row[0] for row in sa.inspect(bind).get_table_names()}
+    tables = set(sa.inspect(bind).get_table_names())
     if "wellbeing_records" not in tables:
         return
     op.drop_table("wellbeing_records")

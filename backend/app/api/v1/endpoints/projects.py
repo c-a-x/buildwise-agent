@@ -7,6 +7,7 @@ from app.core.exceptions import ForbiddenError
 from app.db.session import get_db
 from app.models import User
 from app.schemas.project import ProjectCreate, ProjectRead
+from app.services.audit_service import client_ip, record_audit
 from app.services.project_service import ProjectService
 
 
@@ -24,6 +25,7 @@ def create_project(request: ProjectCreate, http_request: Request, user: User = D
     if user.role not in {"admin", "project_manager"}:
         raise ForbiddenError("只有管理员或项目经理可以创建项目")
     project = ProjectService(db).create(request, user.id)
+    record_audit(db, user_id=user.id, action="create_project", resource_type="project", resource_id=project.id, detail_json={"code": project.code, "name": project.name}, ip_address=client_ip(http_request))
     return ok(ProjectRead.model_validate(project).model_dump(), http_request, "项目创建成功")
 
 

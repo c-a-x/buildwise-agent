@@ -24,6 +24,7 @@ const protectedRoutes: RouteRecordRaw[] = [
   { path: '/green', name: 'green', component: () => import('@/views/green/GreenConstructionView.vue'), meta: { requiresAuth: true, title: '绿色建造' } },
   { path: '/knowledge', name: 'knowledge', component: () => import('@/views/knowledge/KnowledgeBaseView.vue'), meta: { requiresAuth: true, title: '规范知识库' } },
   { path: '/profile', name: 'profile', component: () => import('@/views/user/UserProfileView.vue'), meta: { requiresAuth: true, title: '用户中心' } },
+  { path: '/audit', name: 'audit', component: () => import('@/views/audit/AuditLogView.vue'), meta: { requiresAuth: true, title: '权限审计', roles: ['admin'] } },
   { path: '/settings', name: 'settings', component: () => import('@/views/system/SystemSettingsView.vue'), meta: { requiresAuth: true, title: '系统设置', roles: ['admin', 'project_manager'] } },
 ]
 

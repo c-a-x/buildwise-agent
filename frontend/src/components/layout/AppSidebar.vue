@@ -19,6 +19,7 @@ const groups: NavigationGroup[] = [
   { label: '质量闭环', items: [{ label: '质量巡检', to: '/quality', icon: 'quality', roles: ['admin', 'project_manager', 'safety_officer', 'quality_inspector'] }] },
   { label: '绿色闭环', items: [{ label: '绿色建造', to: '/green', icon: 'leaf' }] },
   { label: '项目协同', items: [{ label: '项目日报', to: '/reports/daily', icon: 'report' }, { label: '日报历史', to: '/reports/history', icon: 'history' }, { label: '规范知识库', to: '/knowledge', icon: 'book' }] },
+  { label: '系统管理', items: [{ label: '权限审计', to: '/audit', icon: 'lock', roles: ['admin'] }] },
 ]
 
 const visibleGroups = computed(() => groups.map((group) => ({ ...group, items: group.items.filter((item) => !item.roles || (auth.user && item.roles.includes(auth.user.role))) })).filter((group) => group.items.length))

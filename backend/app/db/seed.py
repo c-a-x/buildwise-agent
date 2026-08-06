@@ -38,6 +38,7 @@ def seed_database() -> None:
     db = SessionLocal()
     try:
         users = [
+            ("USR-000", "admin", "演示管理员", "admin"),
             ("USR-001", "manager", "演示项目经理", "project_manager"),
             ("USR-002", "safety", "演示安全员", "safety_officer"),
             ("USR-003", "quality", "演示质检员", "quality_inspector"),

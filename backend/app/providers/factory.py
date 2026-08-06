@@ -18,6 +18,8 @@ from app.providers.vision.hybrid import SafetyHybridVisionProvider
 from app.providers.vision.mock import MockVisionProvider
 from app.providers.vision.quality_hybrid import QualityHybridVisionProvider
 from app.providers.vision.ultralytics import UltralyticsVisionProvider
+from app.providers.weather.base import WeatherProvider
+from app.providers.weather.openweather import OpenWeatherProvider
 
 
 def build_vision_provider(settings: Settings) -> VisionProvider:
@@ -103,4 +105,16 @@ def build_tts_provider(settings: Settings) -> SpeechSynthesisProvider | None:
         return EdgeTTSSpeechProvider(voice=settings.tts_voice)
     if settings.tts_provider == "mock":
         return MockTTSSpeechProvider()
+    return None
+
+
+def build_weather_provider(settings: Settings) -> WeatherProvider | None:
+    """构建实时天气 Provider；未配置（off 或缺 WEATHER_API_KEY）时返回 None。
+
+    与 TTS 语义一致：天气是可选增强，工友关怀未配置时回退手动输入，不抛错。
+    """
+    if settings.weather_provider == "openweather":
+        if not settings.weather_api_key:
+            return None
+        return OpenWeatherProvider(settings.weather_api_base_url, settings.weather_api_key)
     return None

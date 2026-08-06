@@ -232,6 +232,26 @@ VISION_LLM_PROVIDER=off          # claude_cli | doubao | off
 - **与 safety/quality 的差异**：绿色为表单输入的计算核心，不走图像/五 Agent 闭环（绿色检测闭环规划中）；复用 `carbon_analyses` 表（`requested_by/area_m2/scope/is_simulated/report_preview/factor_version`），条目与分阶段明细存 `result_json`；未命中因子的条目按 0 计并给出警告，不中断请求；
 - **降级规则**：因子库缺失或解析失败时返回空库并提示 `GREEN_FACTORS_PATH` 配置，所有条目按因子缺失处理。
 
+## 工友关怀（care 模块）
+
+「工友关怀」页（`/worker-wellbeing`）为工友幸福服务：输入天气/环境数据（温度、湿度、天气现象），**CareAgent** 计算高温等级、中暑风险指数与体感温度，输出温馨、可执行的关怀提醒、中暑急救知识与现场福利设施信息，红色高温（≥40℃）自动联动网络音响/PA 语音广播。
+
+- **法规依据**：高温三级分级引用《防暑降温措施管理办法》（安监总安健〔2012〕89号）——日最高气温≥40℃ 停止当日室外露天作业；37–40℃ 全天室外作业累计≤6小时、气温最高时段3小时内不得安排室外露天作业；35–37℃ 换班轮休、缩短连续作业、不得加班；不得安排怀孕女职工和未成年工在 35℃ 以上从事室外露天作业；35℃ 以上室外作业应发放高温津贴；
+- **规则库**：`data_demo/wellbeing/rules.json` 可编辑——高温分级、作业限制条文、温馨提示库（按高温档触发）、中暑急救知识（先兆/轻症/重症热射病）、福利设施信息卡（饮水点/休息亭/防暑药领取点/绿豆汤时段）；修改文件后重启后端生效；
+- **中暑风险指数 0-100**：温度主导 + 湿度修正的确定性公式（纯 Python，注释文档化），分「低/中/高/极高」四档；体感温度用 humidex 简化近似；
+- **天气数据源（可选）**：`WEATHER_PROVIDER=openweather` + `WEATHER_API_KEY` 接入 OpenWeather 兼容 API 预填天气；未配置或请求失败时 `GET /care/weather` 返回 `available=false` + 中文原因，页面回退手动输入，不报错；
+- **广播联动**：分析结果达红色高温且配置 `BROADCAST_WEBHOOK_URL` 时，后台推送关怀播报（如"高温红色预警！应当立即停止室外露天作业…"）到网络音响/PA，复用语音广播通道（文字 + 可选 TTS 音频、失败静默）；
+- **接口**：
+  | 接口 | 说明 |
+  | --- | --- |
+  | `POST /api/v1/care/analyze` | JSON 提交 `project_id/temperature_c/humidity_pct/condition/description` → 高温等级 + 中暑风险 + 温馨提醒 + 急救 + 设施（红色自动广播） |
+  | `GET /api/v1/care/records` | 关怀分析历史（可按 `project_id` 过滤） |
+  | `GET /api/v1/care/records/{id}` | 关怀分析详情 |
+  | `GET /api/v1/care/weather` | 实时天气（未配置 API 时 `available=false`） |
+  | `GET /api/v1/care/tips` | 规则库静态内容（分级/提示/急救/设施） |
+  | `GET /api/v1/care/status` | 模块状态 |
+- **降级规则**：规则库缺失或解析失败时回退内置兜底规则并标记 `is_simulated=true`，analyze 永不报错；天气 Provider 未配置时仅天气查询降级，分析本身走手动输入始终可用。
+
 ## 统计分析（z-score）
 
 全部使用纯 Python `statistics`，不引入 numpy/scipy/pandas；统计口径如下：
@@ -405,7 +425,7 @@ npm run build
 
 ## 页面与目录
 
-页面和路由覆盖登录、注册、找回密码、仪表盘、项目管理、安全分析、实时监控、安全历史、整改工单、工单详情、工友助手、日报及历史、质量巡检、绿色碳排核算、知识库、个人资料、系统设置，以及 403/404 页面。
+页面和路由覆盖登录、注册、找回密码、仪表盘、项目管理、安全分析、实时监控、安全历史、整改工单、工单详情、工友助手、工友关怀、日报及历史、质量巡检、绿色碳排核算、知识库、个人资料、系统设置，以及 403/404 页面。
 
 - `frontend/`：Vue 3 + TypeScript + Pinia + Vue Router；
 - `backend/`：FastAPI + Pydantic + SQLAlchemy + Alembic + LangGraph；
@@ -424,6 +444,7 @@ npm run build
 - 日报核心数字来自 SQL 聚合，日报文案可由模板或真实文本 Provider 生成；
 - 质量巡检已接入真实五 Agent 闭环：MBDD2025 训练的 YOLO 五类缺陷检测（模型缺失时降级 `quality_mock` 并标记 `is_simulated=true`），质量工单由质检员确认；
 - 绿色建造已接入碳排核算核心：GB/T 51366-2019 因子法计算 A1-A3/A4/A5 分阶段排放（演示因子 `verified=false` 时 `is_simulated=true`），绿色五 Agent 检测闭环和真实碳排数据源仍为后续阶段；
+- 工友关怀已接入高温关怀闭环：CareAgent 按《防暑降温措施管理办法》分级计算中暑风险与温馨提醒（规则库缺失时 `is_simulated=true`），天气 API 可选、未配置时回退手动输入，红色高温联动语音广播；
 - 工单列表展示负责人姓名（`assignee_name`），未指派时回退显示负责人 ID；
 - 知识库提供统一 RAG 问答（`POST /knowledge/chat`），默认离线拼装、LLM 可选且失败自动降级；
 - 工友助手回答由规范知识库 RAG 检索生成（内嵌《来源·条款》，未命中回退本地模板），语音输入优先浏览器 Web Speech（zh-CN）本地识别；未配置 ASR Provider 时后端 `/transcribe` 返回 `available=false` 而非报错；
@@ -435,4 +456,5 @@ npm run build
 - 接入语音提醒和权限审计；
 - 为 `QualityAgent` 接入真实质量巡检数据源；
 - 为 `GreenAgent` 接入真实材料和碳排数据源；
+- 为 `CareAgent` 接入真实天气数据源与定时关怀提醒，增加工友反馈问卷与幸福指数统计；
 - 面向生产环境迁移 PostgreSQL、对象存储、HTTPS、集中日志和速率限制。

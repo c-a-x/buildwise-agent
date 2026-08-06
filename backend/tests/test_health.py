@@ -7,7 +7,7 @@ def test_health_and_modules(client):
     assert response.json()["data"]["status"] == "ok"
     modules = client.get("/api/v1/modules")
     assert modules.status_code == 200
-    assert {item["key"] for item in modules.json()["data"]} == {"safety", "quality", "green"}
+    assert {item["key"] for item in modules.json()["data"]} == {"safety", "quality", "green", "care"}
 
 
 def test_protected_endpoint_requires_token(client):

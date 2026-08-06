@@ -242,6 +242,22 @@ class CarbonAnalysis(Base):
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
 
+class WellbeingRecord(Base):
+    """工友关怀分析记录：天气/环境输入 → 高温等级 + 中暑风险 + 温馨提醒。"""
+
+    __tablename__ = "wellbeing_records"
+
+    id = Column(String(64), primary_key=True, default=lambda: new_id("WB"))
+    project_id = Column(String(64), ForeignKey("projects.id"), nullable=False)
+    requested_by = Column(String(64), ForeignKey("users.id"), nullable=True)
+    heat_level = Column(String(16), nullable=False)  # none | yellow | orange | red
+    heat_index = Column(Float, nullable=True)  # 体感温度（humidex 近似）
+    risk_index = Column(Integer, nullable=True)  # 中暑风险指数 0~100
+    is_simulated = Column(Boolean, default=False, nullable=False)
+    result_json = Column(JSON, default=dict, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     __table_args__ = (Index("ix_audit_logs_user_created", "user_id", "created_at"),)

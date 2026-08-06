@@ -37,12 +37,12 @@ def build_broadcast_message(hazards: list[dict[str, Any]]) -> str:
     return f"警告！检测到{'、'.join(names)}，请立即整改。"
 
 
-def _build_payload(hazards: list[dict[str, Any]], settings: Settings) -> dict[str, Any]:
+def _build_text_payload(message: str, settings: Settings) -> dict[str, Any]:
+    """按给定文案构建广播 payload（文字 + 可选 TTS 音频）。合成失败降级为只推文字。"""
     payload: dict[str, Any] = {
         "source": "buildwise-broadcast",
         "triggered_at": datetime.now(timezone.utc).isoformat(),
-        "message": build_broadcast_message(hazards),
-        "hazards": hazards,
+        "message": message,
         "tts": {"provider": None, "available": False, "is_simulated": False},
     }
     try:
@@ -52,7 +52,7 @@ def _build_payload(hazards: list[dict[str, Any]], settings: Settings) -> dict[st
     if provider is None:
         return payload
     try:
-        audio = provider.synthesize(payload["message"])
+        audio = provider.synthesize(message)
     except AppError:
         return payload  # 合成失败降级：只推文字
     payload["audio_base64"] = base64.b64encode(audio).decode("ascii")
@@ -62,6 +62,12 @@ def _build_payload(hazards: list[dict[str, Any]], settings: Settings) -> dict[st
         "available": True,
         "is_simulated": provider.is_simulated,
     }
+    return payload
+
+
+def _build_payload(hazards: list[dict[str, Any]], settings: Settings) -> dict[str, Any]:
+    payload = _build_text_payload(build_broadcast_message(hazards), settings)
+    payload["hazards"] = hazards
     return payload
 
 
@@ -82,6 +88,16 @@ def broadcast_voice_alert(hazards: list[dict[str, Any]], settings: Settings) -> 
     payload = _build_payload(hazards, settings)
     if not payload["message"]:
         return
+    _dispatch(payload, settings.broadcast_webhook_url)
+
+
+def broadcast_text_alert(message: str, settings: Settings) -> None:
+    """向网络音响/PA webhook 上报一条自定义文字播报（如高温红色预警）。失败静默。"""
+    if not settings.broadcast_webhook_url:
+        return
+    if not message.strip():
+        return
+    payload = _build_text_payload(message, settings)
     _dispatch(payload, settings.broadcast_webhook_url)
 
 

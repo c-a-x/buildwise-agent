@@ -88,6 +88,14 @@ class Settings:
         os.getenv("GREEN_FACTORS_PATH", "../data_demo/green/factors.json"),
         "../data_demo/green/factors.json",
     )
+    wellbeing_rules_path: Path = _path_from_env(
+        os.getenv("WELLBEING_RULES_PATH", "../data_demo/wellbeing/rules.json"),
+        "../data_demo/wellbeing/rules.json",
+    )
+    weather_provider: str = os.getenv("WEATHER_PROVIDER", "off")  # off | openweather
+    weather_api_base_url: str = os.getenv("WEATHER_API_BASE_URL", "https://api.openweathermap.org/data/2.5")
+    weather_api_key: str = os.getenv("WEATHER_API_KEY", "")
+    weather_city: str = os.getenv("WEATHER_CITY", "")
     cors_origins: tuple[str, ...] = tuple(
         origin.strip()
         for origin in os.getenv(

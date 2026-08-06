@@ -17,6 +17,7 @@ const protectedRoutes: RouteRecordRaw[] = [
   { path: '/work-orders', name: 'work-orders', component: () => import('@/views/work-orders/WorkOrderListView.vue'), meta: { requiresAuth: true, title: '整改工单' } },
   { path: '/work-orders/:id', name: 'work-order-detail', component: () => import('@/views/work-orders/WorkOrderDetailView.vue'), meta: { requiresAuth: true, title: '工单详情' } },
   { path: '/worker-care', name: 'worker-care', component: () => import('@/views/worker-care/WorkerCareView.vue'), meta: { requiresAuth: true, title: '工友助手' } },
+  { path: '/worker-wellbeing', name: 'worker-wellbeing', component: () => import('@/views/wellbeing/WellbeingView.vue'), meta: { requiresAuth: true, title: '工友关怀' } },
   { path: '/reports/daily', name: 'daily-report', component: () => import('@/views/reports/DailyReportView.vue'), meta: { requiresAuth: true, title: '项目日报', roles: ['admin', 'project_manager', 'safety_officer', 'quality_inspector'] } },
   { path: '/reports/history', name: 'report-history', component: () => import('@/views/reports/ReportHistoryView.vue'), meta: { requiresAuth: true, title: '日报历史', roles: ['admin', 'project_manager', 'safety_officer', 'quality_inspector'] } },
   { path: '/quality', name: 'quality', component: () => import('@/views/quality/QualityInspectionView.vue'), meta: { requiresAuth: true, title: '质量巡检', roles: ['admin', 'project_manager', 'safety_officer', 'quality_inspector'] } },

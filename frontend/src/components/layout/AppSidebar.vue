@@ -15,7 +15,7 @@ const route = useRoute()
 
 const groups: NavigationGroup[] = [
   { label: '总览', items: [{ label: '项目工作台', to: '/dashboard', icon: 'dashboard' }, { label: '项目管理', to: '/projects', icon: 'project' }] },
-  { label: '安全闭环', items: [{ label: '现场安全分析', to: '/safety/analyze', icon: 'shield', roles: ['admin', 'project_manager', 'safety_officer'] }, { label: '实时监控', to: '/safety/realtime', icon: 'camera', roles: ['admin', 'project_manager', 'safety_officer'] }, { label: '安全历史', to: '/safety/history', icon: 'history', roles: ['admin', 'project_manager', 'safety_officer', 'quality_inspector'] }, { label: '整改工单', to: '/work-orders', icon: 'clipboard' }, { label: '工友助手', to: '/worker-care', icon: 'worker' }] },
+  { label: '安全闭环', items: [{ label: '现场安全分析', to: '/safety/analyze', icon: 'shield', roles: ['admin', 'project_manager', 'safety_officer'] }, { label: '实时监控', to: '/safety/realtime', icon: 'camera', roles: ['admin', 'project_manager', 'safety_officer'] }, { label: '安全历史', to: '/safety/history', icon: 'history', roles: ['admin', 'project_manager', 'safety_officer', 'quality_inspector'] }, { label: '整改工单', to: '/work-orders', icon: 'clipboard' }, { label: '工友助手', to: '/worker-care', icon: 'worker' }, { label: '工友关怀', to: '/worker-wellbeing', icon: 'sun' }] },
   { label: '质量闭环', items: [{ label: '质量巡检', to: '/quality', icon: 'quality', roles: ['admin', 'project_manager', 'safety_officer', 'quality_inspector'] }] },
   { label: '绿色闭环', items: [{ label: '绿色建造', to: '/green', icon: 'leaf' }] },
   { label: '项目协同', items: [{ label: '项目日报', to: '/reports/daily', icon: 'report' }, { label: '日报历史', to: '/reports/history', icon: 'history' }, { label: '规范知识库', to: '/knowledge', icon: 'book' }] },

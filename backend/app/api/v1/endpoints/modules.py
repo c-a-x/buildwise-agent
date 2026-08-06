@@ -40,6 +40,16 @@ def modules(http_request: Request):
                 "planned_outputs": ["碳排统计", "减排建议"],
                 "available_endpoints": ["POST /api/v1/green/analyze", "GET /api/v1/green/analyses", "GET /api/v1/green/factors"],
             },
+            {
+                "key": "care",
+                "name": "工友关怀",
+                "agent_name": "CareAgent",
+                "status": "available",
+                "description": "高温分级 + 中暑风险 + 温馨提醒（《防暑降温措施管理办法》）。",
+                "planned_inputs": ["温度", "湿度", "天气现象"],
+                "planned_outputs": ["高温等级", "中暑风险指数", "作业限制", "温馨提醒", "急救知识", "福利设施"],
+                "available_endpoints": ["POST /api/v1/care/analyze", "GET /api/v1/care/records", "GET /api/v1/care/weather", "GET /api/v1/care/tips"],
+            },
         ],
         http_request,
     )

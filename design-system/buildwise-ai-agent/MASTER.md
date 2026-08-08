@@ -1,228 +1,117 @@
-# Design System Master File
+# BuildWise AI Agent · Unified Interface Design System
 
-> **LOGIC:** When building a specific page, first check `design-system/pages/[page-name].md`.
-> If that file exists, its rules **override** this Master file.
-> If not, strictly follow the rules below.
+> Source of truth for the 2026-08-08 unified “Architectural Operations Console” refresh.
 
----
+## Design intent
 
-**Project:** BuildWise AI Agent
-**Generated:** 2026-08-02 20:03:33
-**Category:** B2B Service
-**Design Dials:** Variance 5/10 (Balanced / Modern) | Motion 4/10 (Standard) | Density 8/10 (Dense / Dashboard)
+BuildWise is a construction-site operations platform, not a generic AI showcase. The interface should feel like a mature project-control product: warm, precise, information-dense, and calm under pressure. Visual emphasis comes from asymmetric composition, editorial headings, architectural grids, solid color blocks, and restrained material texture.
 
----
+Avoid AI-default visual language: no purple/blue AI gradients, neon glow, decorative particles, robot illustrations, emoji icons, excessive glass blur, or card-everything layouts.
 
-## Global Rules
-
-### Color Palette
-
-| Role | Hex | CSS Variable |
-|------|-----|--------------|
-| Primary | `#64748B` | `--color-primary` |
-| On Primary | `#FFFFFF` | `--color-on-primary` |
-| Secondary | `#94A3B8` | `--color-secondary` |
-| Accent/CTA | `#EA580C` | `--color-accent` |
-| Background | `#F8FAFC` | `--color-background` |
-| Foreground | `#334155` | `--color-foreground` |
-| Muted | `#EBF0F5` | `--color-muted` |
-| Border | `#E2E8F0` | `--color-border` |
-| Destructive | `#DC2626` | `--color-destructive` |
-| Ring | `#64748B` | `--color-ring` |
-
-**Color Notes:** Industrial grey + safety orange [Accent adjusted from #F97316 for WCAG 3:1]
-
-### Typography
-
-- **Heading Font:** Fira Code
-- **Body Font:** Fira Sans
-- **Mood:** dashboard, data, analytics, code, technical, precise
-- **Google Fonts:** [Fira Code + Fira Sans](https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap)
-
-**CSS Import:**
-```css
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
-```
-
-### Spacing Variables
-
-*Density: 8/10 — Dense / Dashboard*
-
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--space-xs` | `2px` / `0.125rem` | Tight gaps |
-| `--space-sm` | `4px` / `0.25rem` | Icon gaps, inline spacing |
-| `--space-md` | `8px` / `0.5rem` | Standard padding |
-| `--space-lg` | `12px` / `0.75rem` | Section padding |
-| `--space-xl` | `16px` / `1rem` | Large gaps |
-| `--space-2xl` | `24px` / `1.5rem` | Section margins |
-| `--space-3xl` | `32px` / `2rem` | Hero padding |
-
-### Shadow Depths
-
-| Level | Value | Usage |
-|-------|-------|-------|
-| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)` | Subtle lift |
-| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.1)` | Cards, buttons |
-| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.1)` | Modals, dropdowns |
-| `--shadow-xl` | `0 20px 25px rgba(0,0,0,0.15)` | Hero images, featured cards |
-
----
-
-## Component Specs
-
-### Buttons
+## Global tokens
 
 ```css
-/* Primary Button */
-.btn-primary {
-  background: #EA580C;
-  color: white;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.btn-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-/* Secondary Button */
-.btn-secondary {
-  background: transparent;
-  color: #64748B;
-  border: 2px solid #64748B;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-```
-
-### Cards
-
-```css
-.card {
-  background: #F8FAFC;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: var(--shadow-md);
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
+:root {
+  --navy-950: #0b1728;
+  --navy-900: #10233d;
+  --navy-850: #18304f;
+  --primary: #0f6e70;
+  --primary-deep: #0b5c60;
+  --primary-soft: #e4f0ed;
+  --cyan: #3caea5;
+  --accent: #a85c0a;
+  --accent-soft: #fff0d9;
+  --bg: #f7f6f1;
+  --surface: #fffdf9;
+  --surface-soft: #f0efe8;
+  --surface-muted: #e8e8e0;
+  --text: #1d2a3a;
+  --text-soft: #455568;
+  --muted: #5c6b79;
+  --muted-light: #7a8792;
+  --line: #d9ded9;
+  --success: #247a59;
+  --success-bg: #e5f3eb;
+  --warning: #a85c0a;
+  --warning-bg: #fff0d9;
+  --danger: #b43f3f;
+  --danger-bg: #fde8e5;
+  --critical: #8f1d2a;
+  --critical-bg: #f8dfe3;
+  --shadow-sm: 0 1px 2px rgb(29 42 58 / 6%);
+  --shadow-md: 0 8px 24px rgb(29 42 58 / 8%);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --scroll-track: #e8e8e0;
+  --scroll-thumb: #0f6e70;
+  --scroll-thumb-hover: #0b5c60;
+  --ease: 200ms ease;
 }
 ```
 
-### Inputs
+## Typography
 
-```css
-.input {
-  padding: 12px 16px;
-  border: 1px solid #E2E8F0;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: border-color 200ms ease;
-}
+- Body: system Chinese stack (`PingFang SC`, `Microsoft YaHei`, `Segoe UI`, sans-serif); no remote font dependency.
+- Headings: 600–800 weight, tight tracking only for display headings.
+- Body: 14–16px, line-height 1.5–1.75.
+- Data: tabular numerals; use monospace only for IDs, timestamps, provider states, and trace data.
+- Scale: 12 / 14 / 16 / 18 / 24 / 32 / 42px.
 
-.input:focus {
-  border-color: #64748B;
-  outline: none;
-  box-shadow: 0 0 0 3px #64748B20;
-}
-```
+## Layout grammar
 
-### Modals
+- Desktop content max width: 1440px; use 32–48px gutters at large widths and 14–20px on phones.
+- Use 4/8px spacing rhythm: 4, 8, 12, 16, 24, 32, 48.
+- Page headers use a vertical primary marker, strong title, short description, and one visually dominant action.
+- Dashboard layout is asymmetric: one wide analytical region plus narrower decision panels.
+- Use solid surfaces and 1px rules. Use the architectural SVG grid only as a quiet page texture, never as decoration behind dense text.
+- Radius is restrained: 8px for cards/controls, 12px for grouped surfaces, 16px only for feature panels.
 
-```css
-.modal-overlay {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-}
+## Interaction rules
 
-.modal {
-  background: white;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: var(--shadow-xl);
-  max-width: 500px;
-  width: 90%;
-}
-```
+- Primary CTA per screen: one.
+- All interactive targets: minimum 44×44px with at least 8px separation.
+- Icon-only controls must have `aria-label`; use the existing SVG `AppIcon` family.
+- Focus rings are always visible; never remove browser focus without replacement.
+- Loading over 1s uses a skeleton/progress state; errors include recovery action near the source.
+- Status must be communicated by text/icon plus color, never color alone.
+- Motion is 150–300ms, uses transform/opacity, and respects `prefers-reduced-motion`.
+- Drawer/scrim layers use explicit z-index tokens and provide an obvious close action.
+- Scrollbars are thin and quiet: warm track, mineral-green thumb, darker hover state; dark navigation surfaces use cyan thumb.
+- Native select controls keep keyboard/mobile behavior, while the closed control uses the same 44px height, 8px radius, border, focus ring, and mineral-green chevron.
 
----
+## Semantic status mapping
 
-## Style Guidelines
+| Meaning | Token | UI treatment |
+|---|---|---|
+| normal / complete | `--success` | text + check/status icon + pale green surface |
+| review / pending | `--warning` | text + clock/review icon + pale amber surface |
+| danger / high risk | `--danger` | text + warning icon + pale red surface |
+| critical | `--critical` | text + critical label + stronger border |
+| simulated / offline | `--navy-850` | explicit “模拟/离线” label, never implied |
 
-**Style:** Soft UI Evolution
+## Page composition
 
-**Keywords:** Evolved soft UI, better contrast, modern aesthetics, subtle depth, accessibility-focused, improved shadows, hybrid
+- Auth: dark field-operations panel + quiet warm form surface; use grid texture and process steps, not glowing AI art.
+- Dashboard: six KPI tiles, one dark anchor tile, trend chart, risk mix, work-order flow, recent analysis, due-soon list, anomaly panel.
+- Safety/quality: evidence first, clear review banner, visible simulated/draft state, one confirm action.
+- Work orders: scan-friendly table/list, risk and deadline visible, draft confirmation clearly separated from execution.
+- Reports/knowledge: editorial document layout with readable measure and provenance metadata.
+- Green/placeholder modules: formal status, input requirements, reference provenance, and history—not invented compliance claims.
+- Error/empty/loading: same state component, same icon language, clear next action.
 
-**Best For:** Modern enterprise apps, SaaS platforms, health/wellness, modern business tools, professional, hybrid
+## Responsive checkpoints
 
-**Key Effects:** Improved shadows (softer than flat, clearer than neumorphism), modern (200-300ms), focus visible, WCAG AA/AAA
+- 375px: one-column content, drawer navigation, no horizontal scroll, 16px minimum body text for inputs.
+- 768px: stacked secondary panels, preserved primary action, tables use contained overflow.
+- 1024px: two-column analytical layouts where content remains readable.
+- 1440px: full asymmetric operations grid and stable 1440px content measure.
 
-### Page Pattern
+## Delivery checklist
 
-**Pattern Name:** Real-Time / Operations Landing
-
-- **Conversion Strategy:** For ops/security/iot products. Demo or sandbox link. Trust signals.
-- **CTA Placement:** Primary CTA in nav + After metrics
-- **Section Order:** 1. Hero (product + live preview or status), 2. Key metrics/indicators, 3. How it works, 4. CTA (Start trial / Contact)
-
----
-
-## Motion
-
-**Stagger List** (Standard) — Trigger: load or scroll | Duration: 300-450ms | Easing: `back.out(1.4)`
-
-```js
-gsap.from('.grid-item', { opacity: 0, scale: 0.92, y: 16, duration: 0.4, stagger: { each: 0.06, from: 'start', grid: 'auto' }, ease: 'back.out(1.4)' });
-```
-
-**Framework notes:** grid: 'auto' lets GSAP infer rows/columns from a CSS grid layout for a natural wave stagger
-
-- ✅ Combine with from: 'center' for a bento-grid layout to draw the eye inward first
-- ❌ Don't use back.out on dense data tables; the overshoot reads as sloppy on informational UI
-- ⚡ Group DOM writes; avoid interleaving layout reads (getBoundingClientRect) between staggered tweens
-
----
-
-## Anti-Patterns (Do NOT Use)
-
-- ❌ Playful design
-- ❌ Hidden credentials
-- ❌ AI purple/pink gradients
-
-### Additional Forbidden Patterns
-
-- ❌ **Emojis as icons** — Use SVG icons (Heroicons, Lucide, Simple Icons)
-- ❌ **Missing cursor:pointer** — All clickable elements must have cursor:pointer
-- ❌ **Layout-shifting hovers** — Avoid scale transforms that shift layout
-- ❌ **Low contrast text** — Maintain 4.5:1 minimum contrast ratio
-- ❌ **Instant state changes** — Always use transitions (150-300ms)
-- ❌ **Invisible focus states** — Focus states must be visible for a11y
-
----
-
-## Pre-Delivery Checklist
-
-Before delivering any UI code, verify:
-
-- [ ] No emojis used as icons (use SVG instead)
-- [ ] All icons from consistent icon set (Heroicons/Lucide)
-- [ ] `cursor-pointer` on all clickable elements
-- [ ] Hover states with smooth transitions (150-300ms)
-- [ ] Light mode: text contrast 4.5:1 minimum
-- [ ] Focus states visible for keyboard navigation
-- [ ] `prefers-reduced-motion` respected
-- [ ] Responsive: 375px, 768px, 1024px, 1440px
-- [ ] No content hidden behind fixed navbars
-- [ ] No horizontal scroll on mobile
+- No emoji or mixed icon families.
+- No decorative gradients, neon glow, or unpurposeful blur.
+- No raw per-component color decisions outside the semantic token system.
+- Keyboard navigation, labels, focus, reduced motion, and error recovery verified.
+- Visual QA performed at 375 / 768 / 1024 / 1440px.
+- Frontend tests, type-check, production build, and backend tests pass.

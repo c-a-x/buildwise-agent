@@ -1,0 +1,159 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e83]:
+    - link "跳到主要内容" [ref=e84] [cursor=pointer]:
+      - /url: "#main-content"
+    - complementary [ref=e85]:
+      - generic [ref=e91]:
+        - strong [ref=e92]: 筑智共生
+        - generic [ref=e93]: BUILDWISE AI AGENT
+      - navigation "主导航" [ref=e94]:
+        - generic [ref=e95]:
+          - paragraph [ref=e96]: 总览
+          - link "项目工作台" [ref=e97] [cursor=pointer]:
+            - /url: /dashboard
+          - link "项目管理" [ref=e104] [cursor=pointer]:
+            - /url: /projects
+        - generic [ref=e109]:
+          - paragraph [ref=e110]: 安全闭环
+          - link "现场安全分析" [ref=e111] [cursor=pointer]:
+            - /url: /safety/analyze
+          - link "实时监控" [ref=e116] [cursor=pointer]:
+            - /url: /safety/realtime
+          - link "安全历史" [ref=e121] [cursor=pointer]:
+            - /url: /safety/history
+          - link "整改工单" [ref=e126] [cursor=pointer]:
+            - /url: /work-orders
+          - link "工友助手" [ref=e131] [cursor=pointer]:
+            - /url: /worker-care
+          - link "工友关怀" [ref=e136] [cursor=pointer]:
+            - /url: /worker-wellbeing
+        - generic [ref=e141]:
+          - paragraph [ref=e142]: 质量闭环
+          - link "质量巡检" [ref=e143] [cursor=pointer]:
+            - /url: /quality
+        - generic [ref=e148]:
+          - paragraph [ref=e149]: 绿色闭环
+          - link "绿色建造" [ref=e150] [cursor=pointer]:
+            - /url: /green
+        - generic [ref=e155]:
+          - paragraph [ref=e156]: 项目协同
+          - link "项目日报" [ref=e157] [cursor=pointer]:
+            - /url: /reports/daily
+          - link "日报历史" [ref=e162] [cursor=pointer]:
+            - /url: /reports/history
+          - link "规范知识库" [ref=e167] [cursor=pointer]:
+            - /url: /knowledge
+      - generic [ref=e175]:
+        - strong [ref=e176]: 离线模拟 Provider
+        - generic [ref=e177]: 无需外部 API Key
+    - generic [ref=e178]:
+      - banner [ref=e179]:
+        - generic [ref=e180]:
+          - button "打开导航" [ref=e181] [cursor=pointer]
+          - generic [ref=e184]:
+            - paragraph [ref=e185]: BuildWise / 项目工作台
+            - strong [ref=e186]: 项目工作台
+        - generic [ref=e187]:
+          - generic "当前项目" [ref=e188]:
+            - combobox "当前项目" [ref=e192]
+          - button "通知" [ref=e193] [cursor=pointer]
+          - button "打开用户菜单" [ref=e198] [cursor=pointer]:
+            - generic [ref=e199]: 演
+            - generic [ref=e200]:
+              - strong [ref=e201]: 演示项目经理
+              - generic [ref=e202]: 项目经理
+      - main [ref=e205]:
+        - generic [ref=e206]:
+          - generic [ref=e207]:
+            - generic [ref=e208]:
+              - paragraph [ref=e209]: PROJECT CONTROL CENTER
+              - heading "项目工作台" [level=1] [ref=e210]
+              - paragraph [ref=e211]: 正在载入项目数据
+            - generic [ref=e212]:
+              - link "开始安全分析" [ref=e213] [cursor=pointer]:
+                - /url: /safety/analyze
+              - link "查看今日日报" [ref=e216] [cursor=pointer]:
+                - /url: /reports/daily
+          - generic "项目关键指标" [ref=e220]:
+            - article [ref=e221]:
+              - generic [ref=e222]: 今日
+              - strong [ref=e228]: "0"
+              - paragraph [ref=e229]: 今日新增隐患
+            - article [ref=e230]:
+              - generic [ref=e231]: 需关注
+              - strong [ref=e236]: "0"
+              - paragraph [ref=e237]: 高风险隐患
+            - article [ref=e238]:
+              - generic [ref=e239]: 处理中
+              - strong [ref=e245]: "0"
+              - paragraph [ref=e246]: 待整改工单
+            - article [ref=e247]:
+              - generic [ref=e248]: 待复查
+              - strong [ref=e254]: "0"
+              - paragraph [ref=e255]: 待复查工单
+            - article [ref=e256]:
+              - generic [ref=e257]: 本周
+              - strong [ref=e262]: 0%
+              - paragraph [ref=e263]: 本周工单关闭率
+            - article [ref=e264]:
+              - generic [ref=e265]: 项目
+              - strong [ref=e271]: "0"
+              - paragraph [ref=e272]: 当前项目成员
+          - generic [ref=e273]:
+            - generic [ref=e274]:
+              - generic [ref=e275]:
+                - generic [ref=e276]:
+                  - paragraph [ref=e277]: 7-DAY TREND
+                  - heading "隐患趋势" [level=3] [ref=e278]
+                - generic [ref=e279]: 按天统计 · SQL 数据
+              - img "最近七天隐患数量趋势" [ref=e281]
+            - generic [ref=e282]:
+              - generic [ref=e283]:
+                - generic [ref=e284]:
+                  - paragraph [ref=e285]: RISK MIX
+                  - heading "风险等级分布" [level=3] [ref=e286]
+                - generic [ref=e287]: 累计
+              - generic [ref=e288]:
+                - generic [ref=e290]:
+                  - strong [ref=e291]: "0"
+                  - generic [ref=e292]: 项隐患
+                - paragraph [ref=e294]: 暂无数据
+            - generic [ref=e295]:
+              - generic [ref=e296]:
+                - generic [ref=e297]:
+                  - paragraph [ref=e298]: WORK ORDER FLOW
+                  - heading "工单状态" [level=3] [ref=e299]
+                - generic [ref=e300]: 0 条
+              - paragraph [ref=e302]: 暂无工单状态数据
+            - generic [ref=e303]:
+              - generic [ref=e304]:
+                - generic [ref=e305]:
+                  - paragraph [ref=e306]: RECENT ANALYSIS
+                  - heading "最近安全分析" [level=3] [ref=e307]
+                - link "查看全部" [ref=e308] [cursor=pointer]:
+                  - /url: /safety/history
+              - status [ref=e311]:
+                - strong [ref=e316]: 还没有分析任务
+                - paragraph [ref=e317]: 上传一张现场图片，开始第一条可追踪的安全闭环。
+            - generic [ref=e318]:
+              - generic [ref=e319]:
+                - generic [ref=e320]:
+                  - paragraph [ref=e321]: DUE SOON
+                  - heading "临近截止工单" [level=3] [ref=e322]
+                - link "查看全部" [ref=e323] [cursor=pointer]:
+                  - /url: /work-orders
+              - status [ref=e324]:
+                - strong [ref=e329]: 暂无临近工单
+                - paragraph [ref=e330]: 确认一条整改草稿后，责任人与截止时间会出现在这里。
+            - generic [ref=e331]:
+              - generic [ref=e332]:
+                - generic [ref=e333]:
+                  - paragraph [ref=e334]: ANOMALY SCAN
+                  - heading "异常波动检测" [level=3] [ref=e335]
+                - generic "异常检测模块切换" [ref=e336]:
+                  - button "安全" [ref=e337] [cursor=pointer]
+                  - button "质量" [ref=e338] [cursor=pointer]
+              - paragraph [ref=e339]: 暂无异常检测数据
+  - generic [ref=e2]:
+    - generic "Toggle devtools panel" [ref=e3] [cursor=pointer]
+    - generic "Toggle Component Inspector" [ref=e9] [cursor=pointer]

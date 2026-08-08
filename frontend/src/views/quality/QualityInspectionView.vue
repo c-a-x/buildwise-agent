@@ -210,30 +210,30 @@ function confidence(value: number): string { return `${Math.round(value * 100)}%
 
 <style scoped>
 .sample-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.sample-card { display: grid; gap: 4px; border: 1px solid var(--line); border-radius: 9px; padding: 6px; background: #fff; text-align: left; cursor: pointer; transition: border-color var(--ease), transform var(--ease); }
+.sample-card { display: grid; gap: 4px; border: 1px solid var(--line); border-radius: 9px; padding: 6px; background: var(--surface); text-align: left; cursor: pointer; transition: border-color var(--ease), transform var(--ease); }
 .sample-card:hover { border-color: var(--blue); transform: translateY(-1px); }
 .sample-card img { width: 100%; height: 62px; border-radius: 6px; object-fit: cover; }
 .sample-name { font-size: 10px; font-weight: 700; color: var(--text); }
 .sample-hint { color: var(--muted); font-size: 9px; line-height: 1.3; }
 .hazard-badges { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
 .source-tag { display: inline-flex; align-items: center; min-height: 20px; border-radius: 999px; padding: 0 8px; font-size: 9px; font-weight: 800; }
-.source-tag.yolo { color: #2c6fda; background: #eaf2ff; }
-.source-tag.llm { color: #7c3aed; background: #f3e8ff; }
-.major-tag { display: inline-flex; align-items: center; gap: 3px; min-height: 20px; border-radius: 999px; padding: 0 8px; color: #fff; background: var(--danger); font-size: 9px; font-weight: 800; }
-.hazard-card.is-major { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger); background: #fff7f7; }
+.source-tag.yolo { color: var(--primary); background: var(--primary-soft); }
+.source-tag.llm { color: var(--accent); background: var(--accent-soft); }
+.major-tag { display: inline-flex; align-items: center; gap: 3px; min-height: 20px; border-radius: 999px; padding: 0 8px; color: var(--surface); background: var(--danger); font-size: 9px; font-weight: 800; }
+.hazard-card.is-major { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger); background: var(--danger-bg); }
 .hazard-detail { display: flex; align-items: flex-start; gap: 7px; margin-top: 9px; color: var(--text-soft); font-size: 11px; line-height: 1.55; }
 .hazard-detail .app-icon { flex: none; margin-top: 1px; color: var(--blue); }
 .hazard-detail b { margin-right: 5px; color: var(--text); font-weight: 800; }
-.major-banner { display: flex; align-items: flex-start; gap: 7px; margin-top: 10px; border: 1px solid #f0c4c6; border-radius: 8px; padding: 8px 10px; color: #a13237; background: #fdecec; font-size: 11px; line-height: 1.5; }
+.major-banner { display: flex; align-items: flex-start; gap: 7px; margin-top: 10px; border: 1px solid var(--danger); border-radius: 8px; padding: 8px 10px; color: var(--danger); background: var(--danger-bg); font-size: 11px; line-height: 1.5; }
 .major-banner .app-icon { flex: none; margin-top: 1px; color: var(--danger); }
 .major-banner b { margin-right: 5px; font-weight: 800; }
-.llm-card { border-color: #e3d5fb; background: linear-gradient(145deg, #fbf8ff, #f5efff); }
+.llm-card { border-color: var(--accent); background: var(--surface-soft); }
 .llm-hazard-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
-.llm-hazard-card { border: 1px solid #e8dcfb; border-radius: 10px; padding: 14px; background: #fff; }
+.llm-hazard-card { border: 1px solid var(--accent); border-radius: 10px; padding: 14px; background: var(--surface); }
 .llm-hazard-card.is-major { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger); }
 .llm-hazard-head { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
 .llm-hazard-head strong { font-size: 13px; }
-.llm-category { display: grid; width: 34px; height: 26px; place-items: center; border-radius: 7px; color: #fff; background: #8b5cf6; font-size: 10px; font-weight: 800; }
+.llm-category { display: grid; width: 34px; height: 26px; place-items: center; border-radius: 7px; color: var(--surface); background: var(--accent); font-size: 10px; font-weight: 800; }
 .llm-hazard-card p { margin-top: 9px; color: var(--text-soft); font-size: 12px; line-height: 1.6; }
-.risk-score-tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; background: #eef3fb; color: #1f5fd0; font-size: 11px; font-weight: 700; line-height: 1.6; font-variant-numeric: tabular-nums; }
+.risk-score-tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; background: var(--primary-soft); color: var(--primary-deep); font-size: 11px; font-weight: 700; line-height: 1.6; font-variant-numeric: tabular-nums; }
 </style>

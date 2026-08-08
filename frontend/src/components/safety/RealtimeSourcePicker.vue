@@ -207,18 +207,18 @@ onUnmounted(() => {
 <style scoped>
 .source-picker { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .source-tabs { display: inline-flex; gap: 6px; }
-.source-tab { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; border: 1px solid var(--line); border-radius: 8px; padding: 0 12px; color: var(--text-soft); background: #fff; font-size: 12px; font-weight: 700; cursor: pointer; transition: border-color var(--ease), color var(--ease), background var(--ease); }
+.source-tab { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 0 12px; color: var(--text-soft); background: var(--surface); font-size: 12px; font-weight: 700; cursor: pointer; transition: border-color var(--ease), color var(--ease), background var(--ease); }
 .source-tab:hover { border-color: var(--blue); color: var(--blue); }
-.source-tab.active { border-color: var(--blue); color: #fff; background: var(--blue); }
+.source-tab.active { border-color: var(--primary); color: var(--surface); background: var(--primary); }
 .source-stage { position: relative; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.stage-media { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: #0e1424; aspect-ratio: 4 / 3; }
+.stage-media { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 12px; background: var(--navy-950); aspect-ratio: 4 / 3; }
 .stage-media img, .stage-media video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .source-stage.is-alarm .stage-media { border-color: var(--danger); animation: alarm-pulse 0.9s ease-in-out infinite; }
 @keyframes alarm-pulse {
   0%, 100% { box-shadow: 0 0 0 3px var(--danger); }
-  50% { box-shadow: 0 0 0 8px rgba(220, 53, 69, 0.25); }
+  50% { box-shadow: inset 0 0 0 3px var(--danger); }
 }
-.stage-badge { position: absolute; top: 10px; right: 10px; z-index: 3; border-radius: 999px; padding: 3px 9px; color: #fff; background: rgba(14, 20, 36, 0.72); font-size: 10px; font-weight: 800; }
+.stage-badge { position: absolute; top: 10px; right: 10px; z-index: 3; border-radius: 999px; padding: 3px 9px; color: var(--surface); background: var(--navy-950); font-size: 10px; font-weight: 800; }
 .stage-note { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .stage-note .app-icon { flex: none; color: var(--blue); }
 .stage-note.error { color: var(--danger); }
@@ -226,9 +226,9 @@ onUnmounted(() => {
 .camera-field { display: flex; flex-direction: column; gap: 8px; }
 .camera-select { display: flex; align-items: center; gap: 8px; }
 .camera-select label { flex: none; color: var(--muted); font-size: 11px; font-weight: 700; }
-.camera-select select { flex: 1; min-width: 0; height: 34px; border: 1px solid var(--line); border-radius: 8px; padding: 0 11px; color: var(--text); background: #fff; font-size: 12px; }
+.camera-select select { flex: 1; min-width: 0; min-height: 44px; height: 44px; appearance: none; border: 1px solid var(--line); border-radius: 8px; padding: 0 42px 0 11px; color: var(--text); background-color: var(--surface); background-image: var(--select-chevron); background-position: right 12px center; background-repeat: no-repeat; background-size: 16px; font-size: 12px; }
 .camera-select select:focus { outline: none; border-color: var(--blue); }
 .esp32-field { display: flex; align-items: center; gap: 8px; }
-.esp32-field input { flex: 1; min-width: 0; height: 34px; border: 1px solid var(--line); border-radius: 8px; padding: 0 11px; color: var(--text); background: #fff; font-size: 12px; font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; }
+.esp32-field input { flex: 1; min-width: 0; min-height: 44px; height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 0 11px; color: var(--text); background: var(--surface); font-size: 12px; font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; }
 .esp32-field input:focus { outline: none; border-color: var(--blue); }
 </style>

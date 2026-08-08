@@ -163,19 +163,19 @@ onUnmounted(() => {
 <style scoped>
 .camera-capture { display: block; margin-top: 8px; }
 .capture-trigger { width: 100%; }
-.capture-overlay { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 20px; background: rgb(7 16 31 / 55%); backdrop-filter: blur(3px); }
-.capture-dialog { width: min(100%, 480px); border: 1px solid var(--line); border-radius: 14px; padding: 20px; background: #fff; box-shadow: var(--shadow-lg); }
+.capture-overlay { position: fixed; inset: 0; z-index: var(--z-overlay); display: grid; place-items: center; padding: 20px; background: var(--scrim); }
+.capture-dialog { width: min(100%, 480px); border: 1px solid var(--line); border-radius: 14px; padding: 20px; background: var(--surface); box-shadow: var(--shadow-lg); }
 .capture-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 .capture-head h3 { font-size: 16px; }
-.capture-stage { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 11px; background: #0e1424; aspect-ratio: 4 / 3; }
+.capture-stage { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 11px; background: var(--navy-950); aspect-ratio: 4 / 3; }
 .capture-stage video { display: block; width: 100%; height: 100%; object-fit: contain; }
-.capture-empty { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 9px; color: #8aa2bd; font-size: 12px; }
-.capture-empty .app-icon { color: #5a7ea8; }
+.capture-empty { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 9px; color: var(--muted-light); font-size: 12px; }
+.capture-empty .app-icon { color: var(--cyan); }
 .capture-empty.error { color: var(--danger); }
 .capture-empty.error .app-icon { color: var(--danger); }
 .capture-select { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
 .capture-select label { flex: none; color: var(--muted); font-size: 11px; font-weight: 700; }
-.capture-select select { flex: 1; min-width: 0; height: 34px; border: 1px solid var(--line); border-radius: 8px; padding: 0 11px; color: var(--text); background: #fff; font-size: 12px; }
+.capture-select select { flex: 1; min-width: 0; min-height: 44px; height: 44px; appearance: none; border: 1px solid var(--line); border-radius: 8px; padding: 0 42px 0 11px; color: var(--text); background-color: var(--surface); background-image: var(--select-chevron); background-position: right 12px center; background-repeat: no-repeat; background-size: 16px; font-size: 12px; }
 .capture-select select:focus { outline: none; border-color: var(--blue); }
 .capture-note { display: flex; align-items: flex-start; gap: 7px; margin-top: 11px; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .capture-note .app-icon { flex: none; margin-top: 1px; color: var(--blue); }

@@ -11,14 +11,23 @@ const project: Project = { id: 'PRJ-001', code: 'DEMO-001', name: '演示项目'
 
 const inputSelector = 'input[aria-label="输入安全问题"]'
 
+interface MockSpeechResultEvent {
+  resultIndex: number
+  results: ArrayLike<{ isFinal: boolean; 0: { transcript: string } }>
+}
+
+interface MockSpeechErrorEvent {
+  error?: string
+}
+
 class MockSpeechRecognition {
   static instances: MockSpeechRecognition[] = []
   lang = ''
   interimResults = false
   continuous = false
-  onresult: ((event: any) => void) | null = null
+  onresult: ((event: MockSpeechResultEvent) => void) | null = null
   onend: (() => void) | null = null
-  onerror: ((event: any) => void) | null = null
+  onerror: ((event: MockSpeechErrorEvent) => void) | null = null
   started = false
 
   constructor() {

@@ -244,17 +244,17 @@ onUnmounted(() => {
 <style scoped>
 .voice-input { display: flex; flex-direction: column; gap: 8px; }
 .voice-row { display: flex; align-items: center; gap: 8px; }
-.voice-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; border: 1px solid var(--line); border-radius: 8px; padding: 0 12px; color: var(--text-soft); background: #fff; font-size: 12px; font-weight: 700; cursor: pointer; transition: border-color var(--ease), color var(--ease), background var(--ease); }
+.voice-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 0 12px; color: var(--text-soft); background: var(--surface); font-size: 12px; font-weight: 700; cursor: pointer; transition: border-color var(--ease), color var(--ease), background var(--ease); }
 .voice-button:hover:not(:disabled) { border-color: var(--blue); color: var(--blue); }
 .voice-button:disabled { opacity: 0.55; cursor: not-allowed; }
-.voice-button.recording { border-color: var(--danger); color: #fff; background: var(--danger); animation: voice-pulse 0.9s ease-in-out infinite; }
+.voice-button.recording { border-color: var(--danger); color: var(--surface); background: var(--danger); animation: voice-pulse 0.9s ease-in-out infinite; }
 .voice-button.transcribing { border-color: var(--blue); color: var(--blue); }
 .voice-button.error { border-color: var(--danger); color: var(--danger); }
 @keyframes voice-pulse {
   0%, 100% { box-shadow: 0 0 0 3px var(--danger); }
-  50% { box-shadow: 0 0 0 7px rgba(220, 53, 69, 0.22); }
+  50% { box-shadow: inset 0 0 0 3px var(--danger); }
 }
-.voice-device { flex: 1; min-width: 0; height: 32px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; color: var(--text); background: #fff; font-size: 12px; }
+.voice-device { flex: 1; min-width: 0; min-height: 44px; height: 44px; appearance: none; border: 1px solid var(--line); border-radius: 8px; padding: 0 42px 0 10px; color: var(--text); background-color: var(--surface); background-image: var(--select-chevron); background-position: right 12px center; background-repeat: no-repeat; background-size: 16px; font-size: 12px; }
 .voice-device:focus { outline: none; border-color: var(--blue); }
 .voice-interim { margin: 0; color: var(--text-soft); font-size: 11px; line-height: 1.6; }
 .voice-note { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; }

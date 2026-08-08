@@ -1,0 +1,3 @@
+- generic [ref=f4e2]:
+  - generic "Toggle devtools panel" [ref=f4e3] [cursor=pointer]
+  - generic "Toggle Component Inspector" [ref=f4e9] [cursor=pointer]

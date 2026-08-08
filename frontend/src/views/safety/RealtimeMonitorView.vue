@@ -125,15 +125,15 @@ function onSourceChange(): void {
 </template>
 
 <style scoped>
-.broadcast-toggle { display: inline-flex; align-items: center; gap: 5px; min-height: 28px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; color: var(--text-soft); background: #fff; font-size: 11px; font-weight: 800; cursor: pointer; transition: border-color var(--ease), color var(--ease), background var(--ease); }
+.broadcast-toggle { display: inline-flex; align-items: center; gap: 5px; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; color: var(--text-soft); background: var(--surface); font-size: 11px; font-weight: 800; cursor: pointer; transition: border-color var(--ease), color var(--ease), background var(--ease); }
 .broadcast-toggle:hover { border-color: var(--blue); color: var(--blue); }
 .realtime-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; margin-top: 18px; }
 @media (max-width: 1080px) { .realtime-layout { grid-template-columns: 1fr; } }
 .stage-card { min-width: 0; }
 .side-panel { display: flex; flex-direction: column; gap: 12px; }
 .live-list { display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; }
-.live-item { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: center; border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; background: #fff; }
-.live-item.is-alarm { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger); background: #fff7f7; }
+.live-item { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: center; border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; background: var(--surface); }
+.live-item.is-alarm { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger); background: var(--danger-bg); }
 .live-item strong { font-size: 12px; color: var(--text); }
 .live-item small { grid-column: 2; color: var(--muted); font-size: 10px; }
 .side-note { display: flex; align-items: flex-start; gap: 8px; border: 1px dashed var(--line); border-radius: 9px; padding: 10px 11px; color: var(--muted); font-size: 11px; line-height: 1.6; }

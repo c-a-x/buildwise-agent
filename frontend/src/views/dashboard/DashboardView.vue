@@ -26,6 +26,7 @@ const trendPoints = computed(() => {
   return values.map((item, index) => `${values.length === 1 ? 0 : (index / (values.length - 1)) * width},${188 - (item.count / max) * 160}`).join(' ')
 })
 const totalRisk = computed(() => (summary.value?.risk_distribution ?? []).reduce((total, item) => total + item.count, 0))
+const totalWorkOrders = computed(() => (summary.value?.work_order_distribution ?? []).reduce((total, item) => total + item.count, 0))
 
 async function load(): Promise<void> {
   const projectId = projects.currentProject?.id
@@ -54,6 +55,10 @@ function anomalyBarHeight(count: number): string {
   return `${Math.round((count / max) * 100)}%`
 }
 
+function workOrderPercentage(count: number): string {
+  return `${totalWorkOrders.value ? Math.round((count / totalWorkOrders.value) * 100) : 0}%`
+}
+
 onMounted(load)
 watch(() => projects.currentProjectId, load)
 </script>
@@ -68,12 +73,15 @@ watch(() => projects.currentProjectId, load)
       <article class="metric-card"><div class="metric-top"><span class="metric-icon danger"><AppIcon name="shield" :size="18" /></span><span class="metric-delta">今日</span></div><strong>{{ metrics.today_incidents }}</strong><p>今日新增隐患</p></article>
       <article class="metric-card"><div class="metric-top"><span class="metric-icon warning"><AppIcon name="spark" :size="18" /></span><span class="metric-delta">需关注</span></div><strong>{{ metrics.high_risk_incidents }}</strong><p>高风险隐患</p></article>
       <article class="metric-card"><div class="metric-top"><span class="metric-icon"><AppIcon name="clipboard" :size="18" /></span><span class="metric-delta">处理中</span></div><strong>{{ metrics.pending_work_orders }}</strong><p>待整改工单</p></article>
-      <article class="metric-card"><div class="metric-top"><span class="metric-icon success"><AppIcon name="check" :size="18" /></span><span class="metric-delta">本周</span></div><strong>{{ metrics.weekly_close_rate }}%</strong><p>工单关闭率 · {{ metrics.project_members }} 位项目成员</p></article>
+      <article class="metric-card"><div class="metric-top"><span class="metric-icon warning"><AppIcon name="clock" :size="18" /></span><span class="metric-delta">待复查</span></div><strong>{{ metrics.pending_review_work_orders }}</strong><p>待复查工单</p></article>
+      <article class="metric-card"><div class="metric-top"><span class="metric-icon success"><AppIcon name="check" :size="18" /></span><span class="metric-delta">本周</span></div><strong>{{ metrics.weekly_close_rate }}%</strong><p>本周工单关闭率</p></article>
+      <article class="metric-card"><div class="metric-top"><span class="metric-icon"><AppIcon name="worker" :size="18" /></span><span class="metric-delta">项目</span></div><strong>{{ metrics.project_members }}</strong><p>当前项目成员</p></article>
     </div>
     <AppState v-if="loading && !summary" type="loading" title="正在同步工作台" description="正在从数据库读取项目统计。" />
     <div v-else class="dashboard-grid">
-      <section class="card chart-card span-2"><div class="card-head"><div><p class="section-kicker">7-DAY TREND</p><h3>隐患趋势</h3></div><span>按天统计 · SQL 数据</span></div><div class="line-chart"><svg viewBox="0 0 650 200" role="img" aria-label="最近七天隐患数量趋势"><polyline :points="trendPoints || '0,188 650,188'" fill="none" stroke="#2c78ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /><polyline :points="trendPoints || '0,188 650,188'" fill="none" stroke="#18c4d9" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity=".12" /></svg><div class="x-labels"><span v-for="item in summary?.risk_trend ?? []" :key="item.date">{{ item.date.slice(5) }}</span></div></div></section>
+      <section class="card chart-card span-2"><div class="card-head"><div><p class="section-kicker">7-DAY TREND</p><h3>隐患趋势</h3></div><span>按天统计 · SQL 数据</span></div><div class="line-chart"><svg viewBox="0 0 650 200" role="img" aria-label="最近七天隐患数量趋势"><polyline class="trend-line" :points="trendPoints || '0,188 650,188'" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" /><polyline class="trend-glow" :points="trendPoints || '0,188 650,188'" fill="none" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity=".12" /></svg><div class="x-labels"><span v-for="item in summary?.risk_trend ?? []" :key="item.date">{{ item.date.slice(5) }}</span></div></div></section>
       <section class="card chart-card"><div class="card-head"><div><p class="section-kicker">RISK MIX</p><h3>风险等级分布</h3></div><span>累计</span></div><div class="donut-wrap"><div class="donut"><div class="donut-inner"><strong>{{ totalRisk }}</strong><span>项隐患</span></div></div><div class="legend-list"><p v-for="item in summary?.risk_distribution ?? []" :key="item.risk_level"><i :class="item.risk_level" /><span>{{ riskLabel(item.risk_level) }}</span><b>{{ item.count }}</b></p><p v-if="!summary?.risk_distribution.length" class="muted-copy">暂无数据</p></div></div></section>
+      <section class="card chart-card"><div class="card-head"><div><p class="section-kicker">WORK ORDER FLOW</p><h3>工单状态</h3></div><span>{{ totalWorkOrders }} 条</span></div><div class="status-bars"><div v-for="item in summary?.work_order_distribution ?? []" :key="item.status" class="status-bar-row"><div><span>{{ statusLabel(item.status) }}</span><b>{{ item.count }}</b></div><div class="status-bar-track"><span :style="{ width: workOrderPercentage(item.count) }" /></div></div><p v-if="!summary?.work_order_distribution.length" class="muted-copy">暂无工单状态数据</p></div></section>
       <section class="card span-2"><div class="card-head"><div><p class="section-kicker">RECENT ANALYSIS</p><h3>最近安全分析</h3></div><RouterLink class="button-icon" to="/safety/history">查看全部 <AppIcon name="arrow" :size="14" /></RouterLink></div><div v-if="summary?.recent_tasks.length" class="compact-list"><RouterLink v-for="task in summary.recent_tasks" :key="task.task_id" :to="`/safety/history?task=${task.task_id}`" class="compact-item"><div><strong>{{ task.location }} · {{ task.work_type }}</strong><small>{{ task.task_id }} · {{ formatDateTime(task.created_at) }}</small></div><span :class="`risk-badge ${task.risk_level}`"><i class="risk-dot" />{{ riskLabel(task.risk_level) }}</span></RouterLink></div><AppState v-else title="还没有分析任务" description="上传一张现场图片，开始第一条可追踪的安全闭环。" /></section>
       <section class="card"><div class="card-head"><div><p class="section-kicker">DUE SOON</p><h3>临近截止工单</h3></div><RouterLink class="button-icon" to="/work-orders">查看全部</RouterLink></div><div v-if="summary?.due_work_orders.length" class="compact-list"><RouterLink v-for="order in summary.due_work_orders" :key="order.id" :to="`/work-orders/${order.id}`" class="compact-item"><div><strong>{{ order.title }}</strong><small>{{ formatDateTime(order.deadline) }} · {{ statusLabel(order.status) }}</small></div><span>{{ riskLabel(order.risk_level) }}</span></RouterLink></div><AppState v-else title="暂无临近工单" description="确认一条整改草稿后，责任人与截止时间会出现在这里。" /></section>
       <section class="card chart-card span-2">
@@ -108,15 +116,24 @@ watch(() => projects.currentProjectId, load)
 </template>
 
 <style scoped>
-.module-toggle { display: inline-flex; gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-soft, #f8fafb); }
-.module-toggle button { padding: 4px 12px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer; }
-.module-toggle button.active { background: #fff; color: var(--text); box-shadow: 0 1px 3px rgba(20, 40, 70, 0.12); }
+.module-toggle { display: inline-flex; gap: 4px; padding: 3px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-soft); }
+.module-toggle button { min-height: 44px; padding: 4px 12px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer; }
+.module-toggle button.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+.module-toggle { background: var(--surface-soft); }
+.module-toggle button.active { background: var(--surface); color: var(--primary); box-shadow: var(--shadow-sm); }
+.trend-line { stroke: var(--primary); }
+.trend-glow { stroke: var(--cyan); }
+.status-bars { display: grid; gap: 15px; padding-top: 4px; }
+.status-bar-row > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--text-soft); font-size: 11px; }
+.status-bar-row b { color: var(--text); font-variant-numeric: tabular-nums; }
+.status-bar-track { height: 8px; overflow: hidden; margin-top: 7px; border-radius: 999px; background: var(--surface-muted); }
+.status-bar-track span { display: block; height: 100%; border-radius: inherit; background: var(--primary); transition: width var(--ease); }
 .anomaly-hero { display: flex; align-items: baseline; gap: 12px; margin-bottom: 12px; }
 .anomaly-hero > strong { font-size: 26px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
 .anomaly-hero > strong small { font-size: 12px; font-weight: 600; color: var(--muted); }
 .anomaly-bars { display: flex; align-items: flex-end; gap: 6px; height: 120px; padding: 8px 4px 0; border-bottom: 1px solid var(--line); }
 .anomaly-day { display: grid; grid-template-rows: 1fr 14px; gap: 4px; flex: 1; height: 100%; align-items: end; }
-.anomaly-day .bar { display: block; width: 100%; min-height: 2px; border-radius: 3px 3px 0 0; background: #d7e3f5; transition: height 0.2s ease; }
-.anomaly-day .bar.spike { background: #d9534f; }
+.anomaly-day .bar { display: block; width: 100%; min-height: 2px; border-radius: 3px 3px 0 0; background: var(--primary-soft); transition: height 0.2s ease; }
+.anomaly-day .bar.spike { background: var(--danger); }
 .anomaly-day .day-label { text-align: center; color: var(--muted); font-size: 9px; font-variant-numeric: tabular-nums; }
 </style>

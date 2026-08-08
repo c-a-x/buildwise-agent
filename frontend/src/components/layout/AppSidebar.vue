@@ -31,11 +31,12 @@ const isActive = (to: string): boolean => route.path === to || route.path.starts
     <div class="brand-block">
       <div class="brand-mark" aria-hidden="true"><i /><i /><i /></div>
       <div class="brand-copy"><strong>筑智共生</strong><small>BUILDWISE AI AGENT</small></div>
+      <button class="sidebar-close" type="button" aria-label="关闭导航" @click="app.closeMobileNav"><AppIcon name="close" :size="18" /></button>
     </div>
     <nav class="sidebar-nav" aria-label="主导航">
       <div v-for="group in visibleGroups" :key="group.label" class="nav-group">
         <p class="nav-group-title">{{ group.label }}</p>
-        <RouterLink v-for="item in group.items" :key="item.to" :to="item.to" class="nav-item" :class="{ active: isActive(item.to) }" :aria-current="isActive(item.to) ? 'page' : undefined">
+        <RouterLink v-for="item in group.items" :key="item.to" :to="item.to" class="nav-item" :class="{ active: isActive(item.to) }" :aria-current="isActive(item.to) ? 'page' : undefined" @click="app.closeMobileNav">
           <AppIcon :name="item.icon" :size="18" /><span>{{ item.label }}</span>
         </RouterLink>
       </div>

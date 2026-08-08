@@ -1,0 +1,54 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e10]:
+        - strong [ref=e11]: 筑智共生
+        - generic [ref=e12]: BUILDWISE AI AGENT
+      - generic [ref=e13]:
+        - paragraph [ref=e14]: CONSTRUCTION INTELLIGENCE
+        - heading [level=1] [ref=e15]:
+          - text: 让每一次巡检，
+          - emphasis [ref=e16]: 都能落到行动。
+        - paragraph [ref=e17]: 从现场识别到规范依据，再到整改工单和项目日报，构建可追踪的安全协同闭环。
+        - generic [ref=e18]:
+          - generic [ref=e19]: 01 识别隐患
+          - generic [ref=e21]: 02 生成任务
+          - generic [ref=e23]: 03 人工复核
+      - paragraph [ref=e24]: Offline-first · Human-in-the-loop · Built for sites
+    - main [ref=e25]:
+      - generic [ref=e26]:
+        - paragraph [ref=e27]: WELCOME BACK
+        - heading "登录工作空间" [level=1] [ref=e28]
+        - paragraph [ref=e29]: 进入项目现场数据与 AI 协同工作台，继续处理今天的安全任务。
+        - generic [ref=e30]:
+          - generic [ref=e31]:
+            - generic [ref=e32]: 用户名
+            - textbox "用户名" [ref=e33]:
+              - /placeholder: 输入演示账号或用户名
+          - generic [ref=e34]:
+            - generic [ref=e35]: 密码
+            - generic [ref=e36]:
+              - textbox "密码" [ref=e37]:
+                - /placeholder: 输入密码
+              - button "显示密码" [ref=e38] [cursor=pointer]
+          - generic [ref=e42]:
+            - checkbox "记住本次登录" [checked] [ref=e43]
+            - text: 记住本次登录
+          - button "登录工作台" [ref=e44] [cursor=pointer]
+        - generic [ref=e47]:
+          - link "还没有账号？创建账号" [ref=e48] [cursor=pointer]:
+            - /url: /register
+          - link "忘记密码" [ref=e49] [cursor=pointer]:
+            - /url: /forgot-password
+        - generic [ref=e50]:
+          - generic [ref=e51]:
+            - strong [ref=e52]: 演示账号
+            - generic [ref=e53]: 密码统一为 BuildWise123!
+          - generic [ref=e54]:
+            - button "项目经理" [ref=e55] [cursor=pointer]
+            - button "安全员" [ref=e59] [cursor=pointer]
+            - button "质检员" [ref=e63] [cursor=pointer]
+            - button "工友" [ref=e67] [cursor=pointer]
+  - generic [ref=e71]:
+    - generic "Toggle devtools panel" [ref=e72] [cursor=pointer]
+    - generic "Toggle Component Inspector" [ref=e78] [cursor=pointer]

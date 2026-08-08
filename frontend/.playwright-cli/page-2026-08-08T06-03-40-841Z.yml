@@ -1,0 +1,215 @@
+- generic [ref=e1]:
+  - generic [ref=e85]:
+    - link "跳到主要内容" [ref=e86] [cursor=pointer]:
+      - /url: "#main-content"
+    - complementary [ref=e87]:
+      - generic [ref=e93]:
+        - strong [ref=e94]: 筑智共生
+        - generic [ref=e95]: BUILDWISE AI AGENT
+      - navigation "主导航" [ref=e96]:
+        - generic [ref=e97]:
+          - paragraph [ref=e98]: 总览
+          - link "项目工作台" [ref=e99] [cursor=pointer]:
+            - /url: /dashboard
+          - link "项目管理" [ref=e106] [cursor=pointer]:
+            - /url: /projects
+        - generic [ref=e111]:
+          - paragraph [ref=e112]: 安全闭环
+          - link "现场安全分析" [ref=e113] [cursor=pointer]:
+            - /url: /safety/analyze
+          - link "实时监控" [ref=e118] [cursor=pointer]:
+            - /url: /safety/realtime
+          - link "安全历史" [ref=e123] [cursor=pointer]:
+            - /url: /safety/history
+          - link "整改工单" [ref=e128] [cursor=pointer]:
+            - /url: /work-orders
+          - link "工友助手" [ref=e133] [cursor=pointer]:
+            - /url: /worker-care
+          - link "工友关怀" [ref=e138] [cursor=pointer]:
+            - /url: /worker-wellbeing
+        - generic [ref=e143]:
+          - paragraph [ref=e144]: 质量闭环
+          - link "质量巡检" [ref=e145] [cursor=pointer]:
+            - /url: /quality
+        - generic [ref=e150]:
+          - paragraph [ref=e151]: 绿色闭环
+          - link "绿色建造" [active] [ref=e152] [cursor=pointer]:
+            - /url: /green
+        - generic [ref=e157]:
+          - paragraph [ref=e158]: 项目协同
+          - link "项目日报" [ref=e159] [cursor=pointer]:
+            - /url: /reports/daily
+          - link "日报历史" [ref=e164] [cursor=pointer]:
+            - /url: /reports/history
+          - link "规范知识库" [ref=e169] [cursor=pointer]:
+            - /url: /knowledge
+      - generic [ref=e177]:
+        - strong [ref=e178]: 离线模拟 Provider
+        - generic [ref=e179]: 无需外部 API Key
+    - generic [ref=e180]:
+      - banner [ref=e181]:
+        - generic [ref=e182]:
+          - button "打开导航" [ref=e183] [cursor=pointer]
+          - generic [ref=e186]:
+            - paragraph [ref=e187]: BuildWise / 绿色建造
+            - strong [ref=e188]: 绿色建造
+        - generic [ref=e189]:
+          - generic "当前项目" [ref=e190]:
+            - combobox "当前项目" [ref=e194]:
+              - option "滨江智造中心一期" [selected]
+              - option "北京中信大厦（中国尊）"
+              - option "深圳平安金融中心"
+              - option "广州周大福金融中心（广州东塔）"
+          - button "通知" [ref=e195] [cursor=pointer]
+          - button "打开用户菜单" [ref=e200] [cursor=pointer]:
+            - generic [ref=e201]: 演
+            - generic [ref=e202]:
+              - strong [ref=e203]: 演示项目经理
+              - generic [ref=e204]: 项目经理
+      - main [ref=e207]:
+        - generic [ref=e295]:
+          - generic [ref=e296]:
+            - generic [ref=e297]:
+              - paragraph [ref=e298]: GREEN CONSTRUCTION
+              - heading "绿色建造 · 碳排核算" [level=1] [ref=e299]
+              - paragraph [ref=e300]: 按 GB/T 51366-2019 因子法（排放 = 活动数据 × 排放因子）核算施工阶段 A1-A3 / A4 / A5 分阶段碳排放。
+            - generic [ref=e301]: 离线因子核算
+          - generic [ref=e304]:
+            - generic [ref=e305]:
+              - generic [ref=e306]:
+                - generic [ref=e307]:
+                  - paragraph [ref=e308]: 01 · INPUT
+                  - heading "输入活动数据" [level=3] [ref=e309]
+                - generic [ref=e310]: GB/T 51366-2019
+              - generic [ref=e311]:
+                - generic [ref=e312]:
+                  - generic [ref=e313]: 所属项目
+                  - combobox [ref=e314]:
+                    - option "滨江智造中心一期" [selected]
+                    - option "北京中信大厦（中国尊）"
+                    - option "深圳平安金融中心"
+                    - option "广州周大福金融中心（广州东塔）"
+                - generic [ref=e315]:
+                  - generic [ref=e316]:
+                    - generic [ref=e317]: 建筑面积（m²）
+                    - spinbutton "如 8500" [ref=e318]
+                  - generic [ref=e319]:
+                    - generic [ref=e320]: 核算范围备注
+                    - textbox "如 一期主体结构施工阶段" [ref=e321]
+                - button "填入示例清单" [ref=e322] [cursor=pointer]
+                - generic [ref=e326]:
+                  - paragraph [ref=e327]: A1-A3 · 建材生产
+                  - paragraph [ref=e328]: 材料清单
+                  - button "添加一条材料" [ref=e329] [cursor=pointer]
+                - generic [ref=e332]:
+                  - paragraph [ref=e333]: A4 · 建材运输
+                  - paragraph [ref=e334]: 运输记录
+                  - button "添加一条运输记录" [ref=e335] [cursor=pointer]
+                - generic [ref=e338]:
+                  - paragraph [ref=e339]: A5 · 施工过程
+                  - paragraph [ref=e340]: 施工能耗
+                  - button "添加一条施工能耗" [ref=e341] [cursor=pointer]
+                - button "开始碳排核算" [ref=e344] [cursor=pointer]
+                - paragraph [ref=e348]: 演示因子（待核证）会在结果中明确标注；正式核算请先在因子库中替换为经核证的排放因子。
+            - status [ref=e351]:
+              - strong [ref=e356]: 暂无核算结果
+              - paragraph [ref=e357]: 填写材料、运输与能耗清单后点击“开始碳排核算”，这里会显示分阶段排放与减排建议。
+          - generic [ref=e358]:
+            - generic [ref=e359]:
+              - generic [ref=e360]:
+                - paragraph [ref=e361]: REAL-WORLD REFERENCE
+                - heading "真实公开数据参考 · 中国建筑" [level=3] [ref=e362]
+              - generic [ref=e363]: 真实披露 · v2024
+            - paragraph [ref=e365]: 数据来源为中国建筑股份有限公司公开披露：《2024年度环境社会治理可持续发展报告》与《2024年年度报告》（均于 2025-04 发布，可在巨潮资讯/公司官网核验）。仅收录公开披露、可核验的数值，供真实对标参考；不参与本项目面积强度 z-score 排名。修改本文件后需重启后端生效。
+            - generic [ref=e366]:
+              - generic [ref=e367]:
+                - paragraph [ref=e368]: 碳排放与目标
+                - generic [ref=e369]:
+                  - generic [ref=e370]:
+                    - paragraph [ref=e371]: 万元产值碳排放强度同比变化
+                    - paragraph [ref=e372]:
+                      - strong [ref=e373]: ↓4.3%
+                    - paragraph [ref=e374]: 较 2022 年下降 4.3%；2024 年完成国资委下达的万元产值碳排放强度考核目标
+                    - paragraph [ref=e375]: 《2024年度ESG报告》 · 2023
+                  - generic [ref=e376]:
+                    - paragraph [ref=e377]: 万元产值营业收入碳排放强度（2027 目标）
+                    - paragraph [ref=e378]:
+                      - strong [ref=e379]: 年均 ↓4.22%
+                    - paragraph [ref=e380]: 较 2024 年累计下降 12.14%；2030 年实现碳达峰目标
+                    - paragraph [ref=e381]: 《2024年度ESG报告》 · 2027
+                  - generic [ref=e382]:
+                    - paragraph [ref=e383]: 范围三碳排放占比
+                    - paragraph [ref=e384]:
+                      - strong [ref=e385]: 约 95%
+                    - paragraph [ref=e386]: 按建材类型以混凝土、钢、砌块为主，三者合计占比近 95%；采用运营控制法核算并已第三方核查
+                    - paragraph [ref=e387]: 《2025年度ESG报告》核查结论 · 2025
+              - generic [ref=e388]:
+                - paragraph [ref=e389]: 能源消耗
+                - generic [ref=e391]:
+                  - paragraph [ref=e392]: 能源消耗总量
+                  - paragraph [ref=e393]:
+                    - strong [ref=e394]: 443,222.70
+                    - text: MWh
+                  - paragraph [ref=e395]: 其中外购电力 127,128.04 MWh、可再生能源用电量 2,406.55 MWh
+                  - paragraph [ref=e396]: 《2024年度ESG报告》 · 2024
+              - generic [ref=e397]:
+                - paragraph [ref=e398]: 绿色建造
+                - generic [ref=e399]:
+                  - generic [ref=e400]:
+                    - paragraph [ref=e401]: 绿色建筑认证项目
+                    - paragraph [ref=e402]:
+                      - strong [ref=e403]: 1,013
+                      - text: 个
+                    - paragraph [ref=e404]: 其中三星级绿色建筑认证项目 151 个；投资开发绿色建筑项目 71 个、18 个获近零能耗/零碳认证
+                    - paragraph [ref=e405]: 《2024年度ESG报告》 · 2024
+                  - generic [ref=e406]:
+                    - paragraph [ref=e407]: 绿色示范工地
+                    - paragraph [ref=e408]:
+                      - strong [ref=e409]: "237"
+                      - text: 个
+                    - paragraph [ref=e410]: 另有施工现场绿色低碳成果 63 个；新建项目环评通过率 100%
+                    - paragraph [ref=e411]: 《2024年度ESG报告》 · 2024
+              - generic [ref=e412]:
+                - paragraph [ref=e413]: 环保投入
+                - generic [ref=e415]:
+                  - paragraph [ref=e416]: 环保投入
+                  - paragraph [ref=e417]:
+                    - strong [ref=e418]: "6.86"
+                    - text: 亿元
+                  - paragraph [ref=e419]: 环保处罚 75 起、罚款 540.87 万元，相关项目均已整改，未发生突发环境事件
+                  - paragraph [ref=e420]: 《2024年度ESG报告》 · 2024
+              - generic [ref=e421]:
+                - paragraph [ref=e422]: 经营规模（2024）
+                - generic [ref=e423]:
+                  - generic [ref=e424]:
+                    - paragraph [ref=e425]: 全年新签合同额
+                    - paragraph [ref=e426]:
+                      - strong [ref=e427]: 45,027
+                      - text: 亿元
+                    - paragraph [ref=e428]: 同比增长 4.1%；其中建筑业务 40,808 亿元（+5.4%）、基础设施 14,149 亿元（+21.1%）
+                    - paragraph [ref=e429]: 《2024年年度报告》 · 2024
+                  - generic [ref=e430]:
+                    - paragraph [ref=e431]: 房屋建筑施工面积
+                    - paragraph [ref=e432]:
+                      - strong [ref=e433]: 169,251
+                      - text: 万m²
+                    - paragraph [ref=e434]: 同比下降 1.7%；房屋建筑竣工面积 22,404 万m²、竣工验收项目 11,279 个
+                    - paragraph [ref=e435]: 《2024年年度报告》 · 2024
+                  - generic [ref=e436]:
+                    - paragraph [ref=e437]: 营业收入
+                    - paragraph [ref=e438]:
+                      - strong [ref=e439]: 21,871
+                      - text: 亿元
+                    - paragraph [ref=e440]: 同比下降 3.5%；归母净利润 461.9 亿元，毛利率 9.9%
+                    - paragraph [ref=e441]: 《2024年年度报告》 · 2024
+            - paragraph [ref=e442]: 数据来源为中国建筑公开报告，供真实对标参考，不参与本项目 z-score 排名。
+          - generic [ref=e443]:
+            - generic [ref=e444]:
+              - generic [ref=e445]:
+                - paragraph [ref=e446]: HISTORY
+                - heading "核算历史" [level=3] [ref=e447]
+              - generic [ref=e448]: 0 条
+            - paragraph [ref=e450]: 暂无核算记录，完成一次分析后这里会显示历史清单。
+  - generic [ref=e71]:
+    - generic "Toggle devtools panel" [ref=e72] [cursor=pointer]
+    - generic "Toggle Component Inspector" [ref=e78] [cursor=pointer]

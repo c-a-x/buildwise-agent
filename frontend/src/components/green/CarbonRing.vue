@@ -15,7 +15,7 @@ const props = defineProps<{
   unit: string
 }>()
 
-const SEGMENT_COLORS = ['#2c78ff', '#18c4d9', '#ea580c'] as const
+const SEGMENT_COLORS = ['var(--primary)', 'var(--cyan)', 'var(--accent)'] as const
 
 const progress = ref(0)
 const shownTotal = ref(0)
@@ -95,7 +95,7 @@ onBeforeUnmount(() => {
       <div class="ring">
         <svg viewBox="0 0 220 220" role="img" aria-label="碳排放分阶段占比环形图">
           <g transform="rotate(-90 110 110)">
-            <circle cx="110" cy="110" r="88" fill="none" stroke="#eef2f8" stroke-width="26" />
+            <circle cx="110" cy="110" r="88" fill="none" stroke="var(--surface-muted)" stroke-width="26" />
             <circle
               v-for="segment in segments"
               :key="segment.stage"
@@ -149,7 +149,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: 26px 30px;
-  background: linear-gradient(135deg, #ffffff, #f2f7ff 140%);
+  background: var(--surface);
   box-shadow: var(--shadow-md);
 }
 .ring-visual { position: relative; display: grid; place-items: center; }
@@ -159,8 +159,8 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: 16px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgb(44 120 255 / 12%), transparent 64%);
-  animation: halo-pulse 3.4s ease-in-out infinite;
+  border: 1px solid var(--primary-soft);
+  background: transparent;
 }
 .ring-center {
   position: absolute;

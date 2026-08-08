@@ -160,7 +160,7 @@ onMounted(refresh)
 <style scoped>
 .chat-card { margin-top: 18px; }
 .chat-answer { margin-top: 12px; }
-.chat-sections { margin: 0; padding: 14px 16px; border-radius: 10px; background: var(--surface-soft, #f6f8fa); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-soft); font-family: inherit; font-size: 12px; line-height: 1.9; }
+.chat-sections { margin: 0; padding: 14px 16px; border-radius: 10px; background: var(--surface-soft); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-soft); font-family: inherit; font-size: 12px; line-height: 1.9; }
 .chat-citations { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.citation-chip { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; background: #eef3fb; color: #1f5fd0; font-size: 11px; font-weight: 600; }
+.citation-chip { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; background: var(--primary-soft); color: var(--primary-deep); font-size: 11px; font-weight: 600; }
 </style>

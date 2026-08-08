@@ -15,7 +15,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="app-shell" :class="{ 'sidebar-collapsed': app.sidebarCollapsed }">
+  <div class="app-shell" :class="{ 'sidebar-collapsed': app.sidebarCollapsed, 'mobile-nav-open': app.mobileNavOpen }">
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
+    <button v-if="app.mobileNavOpen" class="nav-scrim" type="button" aria-label="关闭导航" @click="app.closeMobileNav" />
     <AppSidebar /><div class="workspace"><AppTopbar /><main id="main-content" class="content" tabindex="-1"><RouterView /></main></div>
     <transition name="toast"><div v-if="app.notice" class="toast" role="status"><span class="toast-check"><AppIcon name="check" :size="12" /></span>{{ app.notice }}</div></transition>
   </div>

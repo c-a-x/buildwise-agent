@@ -364,27 +364,28 @@ onMounted(async () => {
 .item-label { margin-bottom: 8px; color: var(--text-soft); font-size: 12px; font-weight: 700; }
 .item-rows { display: grid; gap: 8px; }
 .item-row { display: grid; grid-template-columns: minmax(0, 1fr) 78px 40px 34px; gap: 8px; align-items: center; }
-.item-row select, .item-row input { min-height: 40px; padding: 0.5rem 0.6rem; font-size: 11px; }
+.item-row select { min-height: 44px; padding: 0 42px 0 12px; font-size: 11px; }
+.item-row input { min-height: 44px; padding: 0 12px; font-size: 11px; }
 .row-unit { color: var(--muted); font-size: 10px; text-align: center; }
-.remove-row { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--line); border-radius: 8px; color: var(--danger); background: #fff; }
-.remove-row:hover { border-color: #f0b7b9; background: var(--danger-bg); }
+.remove-row { display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid var(--line); border-radius: 8px; color: var(--danger); background: var(--surface); }
+.remove-row:hover { border-color: var(--danger); background: var(--danger-bg); }
 .result-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .benchmark-card { margin-top: 12px; }
-.benchmark-hero { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 10px; background: linear-gradient(135deg, rgba(34, 130, 89, 0.08), rgba(34, 130, 89, 0.02)); border: 1px solid rgba(34, 130, 89, 0.25); }
-.benchmark-hero > strong { font-size: 30px; font-weight: 800; color: var(--primary, #228259); font-variant-numeric: tabular-nums; }
+.benchmark-hero { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 10px; background: var(--success-bg); border: 1px solid var(--success); }
+.benchmark-hero > strong { font-size: 30px; font-weight: 800; color: var(--success); font-variant-numeric: tabular-nums; }
 .benchmark-hero > strong small { font-size: 13px; font-weight: 600; color: var(--muted); }
 .benchmark-hero-copy { display: grid; gap: 3px; }
 .benchmark-hero-title { margin: 0; font-size: 13px; font-weight: 700; color: var(--text); }
 .benchmark-hero-meta { margin: 0; font-size: 11px; color: var(--muted); }
 .benchmark-list { display: grid; gap: 6px; margin-top: 12px; }
-.benchmark-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) 74px 74px; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--surface-soft, #f8fafb); }
-.benchmark-row.self { outline: 1px solid rgba(34, 130, 89, 0.45); }
+.benchmark-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) 74px 74px; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--surface-soft); }
+.benchmark-row.self { outline: 1px solid var(--success); }
 .benchmark-row .rank { color: var(--muted); }
 .benchmark-row .name { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .benchmark-row .intensity { text-align: right; color: var(--text-soft); font-size: 11px; }
 .benchmark-row .z { text-align: right; font-size: 11px; }
-.benchmark-row .z.good { color: var(--primary, #228259); }
-.benchmark-row .z.bad { color: #d9534f; }
+.benchmark-row .z.good { color: var(--success); }
+.benchmark-row .z.bad { color: var(--danger); }
 .result-tools { display: flex; justify-content: flex-end; margin-top: 2px; }
 .result-tools .secondary-button { display: inline-flex; align-items: center; gap: 6px; }
 .factor-version { font-family: 'Fira Code', monospace; font-size: 14px !important; }
@@ -393,7 +394,7 @@ onMounted(async () => {
 .reference-card { margin-top: 18px; }
 .reference-note { margin: 0 0 14px; color: var(--text-soft); font-size: 12px; line-height: 1.7; }
 .reference-groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
-.reference-group { border: 1px solid var(--line); border-radius: 10px; padding: 14px; background: var(--surface-soft, #f8fafb); }
+.reference-group { border: 1px solid var(--line); border-radius: 10px; padding: 14px; background: var(--surface-soft); }
 .reference-group-title { margin: 0 0 10px; font-size: 12px; font-weight: 700; color: var(--text); }
 .reference-items { display: grid; gap: 10px; }
 .reference-item { display: grid; gap: 2px; }

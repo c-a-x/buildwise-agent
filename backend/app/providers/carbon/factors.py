@@ -56,8 +56,10 @@ def load_factor_library(path: Path | None = None) -> FactorLibrary:
         return FactorLibrary(version="", factors=(), load_error=f"因子库解析失败：{exc}")
 
     factors: list[CarbonFactor] = []
-    for category in ("materials", "energy", "transport"):
-        for item in raw.get(category, []):
+    # JSON 顶层键与规范 category 的映射：文件里材料键为复数 "materials"，
+    # 与 energy/transport 风格不一致，统一映射为单数（前端/其他逻辑按单数匹配）。
+    for json_key, category in (("materials", "material"), ("energy", "energy"), ("transport", "transport")):
+        for item in raw.get(json_key, []):
             if not isinstance(item, dict) or "code" not in item:
                 continue
             factors.append(

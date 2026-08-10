@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date
+
 from pydantic import BaseModel, Field
 
 
@@ -152,3 +154,182 @@ class GreenReference(BaseModel):
     updated_at: str
     source_note: str
     groups: list[ReferenceGroupRead]
+
+
+# ---------- 四节一环保评估 ----------
+
+
+class GreenMetricInput(BaseModel):
+    """单个评估指标输入。value 可空：缺失的指标该维度按 0 计并标记模拟。"""
+
+    key: str
+    value: float | None = Field(default=None, ge=0)
+
+
+class DimensionInput(BaseModel):
+    """一个维度的子指标输入。dimension 取值 material | water | energy | land | env。"""
+
+    dimension: str
+    metrics: list[GreenMetricInput] = Field(default_factory=list)
+
+
+class GreenAssessmentForm(BaseModel):
+    project_id: str
+    title: str = ""
+    area_m2: float | None = Field(default=None, ge=0)
+    dimensions: list[DimensionInput] = Field(default_factory=list)
+
+
+class MetricScore(BaseModel):
+    key: str
+    name: str
+    value: float | None
+    target: float
+    direction: str  # higher | lower
+    score: float  # 0~100
+
+
+class DimensionScore(BaseModel):
+    dimension: str
+    name: str
+    score: float  # 子指标得分均值 0~100
+    metrics: list[MetricScore]
+
+
+class GreenAssessmentResponse(BaseModel):
+    assessment_id: str
+    project_id: str
+    project_name: str
+    title: str
+    area_m2: float | None
+    total_score: float
+    level: str  # 不合格 | 合格 | 优良 | 优秀
+    dimensions: list[DimensionScore]
+    is_simulated: bool
+    report_preview: str
+    created_at: str
+
+
+class GreenAssessmentSummary(BaseModel):
+    assessment_id: str
+    project_id: str
+    project_name: str
+    title: str
+    total_score: float
+    level: str
+    is_simulated: bool
+    created_at: str
+
+
+# ---------- 环保监测台账 ----------
+
+
+class GreenEnvRecordForm(BaseModel):
+    """当日环保监测读数，均可空。同一项目+日期重复提交为 upsert（幂等重录）。"""
+
+    project_id: str
+    record_date: date
+    pm25: float | None = Field(default=None, ge=0)
+    pm10: float | None = Field(default=None, ge=0)
+    tsp: float | None = Field(default=None, ge=0)
+    noise_day_db: float | None = Field(default=None, ge=0)
+    noise_night_db: float | None = Field(default=None, ge=0)
+    cod_mg: float | None = Field(default=None, ge=0)
+    ss_mg: float | None = Field(default=None, ge=0)
+    ph: float | None = Field(default=None, ge=0)
+    solid_waste_t: float | None = Field(default=None, ge=0)
+
+
+class EnvThresholdRead(BaseModel):
+    """UI 展示用阈值常量。rule=above 超上限告警；rule=range 越界告警（如 pH）。"""
+
+    key: str
+    name: str
+    unit: str
+    rule: str  # above | range
+    limit: float | None = None
+    min: float | None = None
+    max: float | None = None
+
+
+class EnvAlertRead(BaseModel):
+    key: str
+    name: str
+    value: float
+    rule: str
+    limit: float | None = None
+    min: float | None = None
+    max: float | None = None
+
+
+class EnvRecordRead(BaseModel):
+    record_id: str
+    project_id: str
+    project_name: str
+    record_date: str
+    pm25: float | None
+    pm10: float | None
+    tsp: float | None
+    noise_day_db: float | None
+    noise_night_db: float | None
+    cod_mg: float | None
+    ss_mg: float | None
+    ph: float | None
+    solid_waste_t: float | None
+    has_alerts: bool
+    alerts: list[EnvAlertRead]
+    created_at: str
+
+
+# ---------- 碳排趋势与目标 ----------
+
+
+class GreenTargetForm(BaseModel):
+    project_id: str
+    target_intensity: float | None = Field(default=None, gt=0)
+    note: str = ""
+
+
+class GreenTargetRead(BaseModel):
+    project_id: str
+    target_intensity: float | None
+    note: str
+    updated_at: str
+
+
+class GreenTrendPoint(BaseModel):
+    created_at: str
+    total_emission: float
+    area_m2: float
+    intensity: float
+
+
+class GreenTrendCurrent(BaseModel):
+    intensity: float | None
+    target_intensity: float | None
+    grade: str  # 达标 | 临界 | 超标 | 未设目标
+    gap_pct: float | None  # 相对目标百分比，负值=优于目标
+
+
+class GreenTrendResponse(BaseModel):
+    project_id: str
+    project_name: str
+    points: list[GreenTrendPoint]
+    current: GreenTrendCurrent
+
+
+# ---------- AI 优化建议 ----------
+
+
+class GreenAdviceForm(BaseModel):
+    project_id: str
+    source_type: str  # carbon | assessment
+    analysis_id: str | None = None
+    assessment_id: str | None = None
+
+
+class GreenAdviceRead(BaseModel):
+    advice: str
+    is_simulated: bool
+    source_type: str
+    generated_at: str

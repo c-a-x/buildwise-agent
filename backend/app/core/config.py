@@ -62,9 +62,14 @@ class Settings:
         "storage/models/yolov8n-5cls-mbdd.pt",
     )
     quality_conf_threshold: float = float(os.getenv("QUALITY_CONF_THRESHOLD", "0.45"))
-    vision_llm_provider: str = os.getenv("VISION_LLM_PROVIDER", "off")  # claude_cli | doubao | off
+    vision_llm_provider: str = os.getenv("VISION_LLM_PROVIDER", "off")  # claude_cli | doubao | zhipu | off
     vision_llm_claude_cmd: str = os.getenv("VISION_LLM_CLAUDE_CMD", "claude")
     vision_llm_timeout: int = int(os.getenv("VISION_LLM_TIMEOUT", "300"))
+    # 视觉 LLM（OpenAI 兼容 HTTP 调用：doubao / zhipu）的独立配置，兜底取 LLM_*，
+    # 避免与纯文本 LLM（如 DeepSeek）共用同组 key/model 时冲突
+    vision_llm_base_url: str = os.getenv("VISION_LLM_BASE_URL", os.getenv("LLM_BASE_URL", ""))
+    vision_llm_api_key: str = os.getenv("VISION_LLM_API_KEY", os.getenv("LLM_API_KEY", ""))
+    vision_llm_model: str = os.getenv("VISION_LLM_MODEL", os.getenv("LLM_MODEL", ""))
     alert_webhook_url: str = os.getenv("ALERT_WEBHOOK_URL", "")  # ESP32 硬报警地址，默认空禁用
     tts_provider: str = os.getenv("TTS_PROVIDER", "off")  # off | edge_tts | mock
     tts_voice: str = os.getenv("TTS_VOICE", "zh-CN-XiaoxiaoNeural")
@@ -96,10 +101,13 @@ class Settings:
         os.getenv("WELLBEING_RULES_PATH", "../data_demo/wellbeing/rules.json"),
         "../data_demo/wellbeing/rules.json",
     )
-    weather_provider: str = os.getenv("WEATHER_PROVIDER", "off")  # off | openweather
+    weather_provider: str = os.getenv("WEATHER_PROVIDER", "off")  # off | openweather | qweather
     weather_api_base_url: str = os.getenv("WEATHER_API_BASE_URL", "https://api.openweathermap.org/data/2.5")
     weather_api_key: str = os.getenv("WEATHER_API_KEY", "")
     weather_city: str = os.getenv("WEATHER_CITY", "")
+    care_schedule_enabled: bool = os.getenv("CARE_SCHEDULE_ENABLED", "false").lower() == "true"  # 定时关怀开关
+    care_schedule_time: str = os.getenv("CARE_SCHEDULE_TIME", "08:00")  # 每日自动评估时间 HH:MM
+    care_schedule_city: str = os.getenv("CARE_SCHEDULE_CITY", "")  # 定时关怀城市，缺省取 WEATHER_CITY
     cors_origins: tuple[str, ...] = tuple(
         origin.strip()
         for origin in os.getenv(

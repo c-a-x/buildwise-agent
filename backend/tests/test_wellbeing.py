@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from dataclasses import replace
 
+import pytest
+
 from app.core.config import settings
 from app.models import WellbeingRecord
 from app.providers.wellbeing import load_wellbeing_rules
@@ -210,8 +212,15 @@ def test_records_filter_by_project(client):
 # ---------- 天气与提示 ----------
 
 
-def test_weather_unconfigured_returns_available_false(client):
+def test_weather_unconfigured_returns_available_false(client, monkeypatch):
+    from app.core.config import settings
     from tests.conftest import login
+
+    # 显式关闭天气 Provider：不依赖 .env 状态，也不发起真实网络请求
+    import app.api.v1.endpoints.wellbeing as wellbeing_endpoint
+
+    offline = replace(settings, weather_provider="off", weather_api_key="")
+    monkeypatch.setattr(wellbeing_endpoint, "settings", offline)
 
     response = client.get("/api/v1/care/weather", headers=login(client, "manager"))
     assert response.status_code == 200
@@ -265,6 +274,92 @@ def test_weather_provider_openweather_condition_map():
     assert _CONDITION_MAP["Clouds"] == "多云"
     assert _CONDITION_MAP["Thunderstorm"] == "雷阵雨"
     assert _CONDITION_MAP["Rain"] == "小雨"
+
+
+def test_weather_provider_qweather_location_ids_and_attrs():
+    from app.providers.weather.qweather import QWeatherProvider
+
+    provider = QWeatherProvider("https://api.qweather.com/v7", "key")
+    assert provider.name == "qweather"
+    assert provider.is_simulated is False
+    # 未收录城市原样透传（可配经纬度或 LocationID），中文城市名映射到官方 LocationID
+    assert provider._location_id("北京") == "101010100"
+    assert provider._location_id("beijing") == "101010100"
+    assert provider._location_id("30.5,114.3") == "30.5,114.3"
+
+
+def test_weather_provider_qweather_fetch_parses_response(monkeypatch):
+    from datetime import datetime, timedelta, timezone
+
+    from app.providers.weather.qweather import QWeatherProvider
+
+    class _FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, object]:
+            return {
+                "code": "200",
+                "updateTime": "2026-08-10T15:35+08:00",
+                "now": {"temp": "33", "humidity": "71", "text": "多云"},
+            }
+
+    calls: list[tuple[str, dict[str, object]]] = []
+    import httpx
+
+    def _fake_get(url, params, timeout):
+        calls.append((url, params))
+        return _FakeResponse()
+
+    monkeypatch.setattr(httpx, "get", _fake_get)
+    snapshot = QWeatherProvider("https://api.qweather.com/v7", "k").fetch("beijing")
+    assert snapshot.temperature_c == 33.0
+    assert snapshot.humidity_pct == 71.0
+    assert snapshot.condition == "多云"
+    assert snapshot.city == "beijing"
+    assert isinstance(snapshot.observed_at, datetime)
+    assert snapshot.observed_at.utcoffset() == timezone(timedelta(hours=8)).utcoffset(None)
+    assert calls[0][1]["location"] == "101010100"
+    assert calls[0][1]["key"] == "k"
+    assert calls[0][0] == "https://api.qweather.com/v7/weather/now"
+
+
+def test_weather_provider_qweather_fetch_bad_update_time_falls_back(monkeypatch):
+    from datetime import datetime
+
+    from app.providers.weather.qweather import QWeatherProvider
+
+    class _FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, object]:
+            return {"code": "200", "updateTime": "not-a-date", "now": {"temp": "28", "humidity": "60", "text": "晴"}}
+
+    import httpx
+
+    monkeypatch.setattr(httpx, "get", lambda url, params, timeout: _FakeResponse())
+    snapshot = QWeatherProvider("https://api.qweather.com/v7", "k").fetch("北京")
+    assert isinstance(snapshot.observed_at, datetime)
+
+
+def test_weather_provider_qweather_fetch_invalid_code(monkeypatch):
+    from app.core.exceptions import AppError
+    from app.providers.weather.qweather import QWeatherProvider
+
+    class _FakeResponse:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, object]:
+            return {"code": "401", "error": {"title": "apikey 无效"}}
+
+    import httpx
+
+    monkeypatch.setattr(httpx, "get", lambda url, params, timeout: _FakeResponse())
+    with pytest.raises(AppError) as exc_info:
+        QWeatherProvider("https://api.qweather.com/v7", "k").fetch("北京")
+    assert exc_info.value.code == "WEATHER_INVALID_RESPONSE"
 
 
 def test_broadcast_text_alert_noop_without_webhook():

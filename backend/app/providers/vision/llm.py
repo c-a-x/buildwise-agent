@@ -3,6 +3,7 @@
 把 safety-scout 的多模态 LLM 分析能力适配为 buildwise 的**同步**调用链：
 - claude_cli：子进程 `claude -p` + Read 工具读图 + --json-schema 约束输出
 - doubao：httpx.Client 调火山方舟 OpenAI 兼容接口，图片 base64 data URI
+- zhipu：httpx.Client 调智谱 bigmodel OpenAI 兼容接口（GLM-4V 支持视觉）
 
 调用链全程同步（subprocess / httpx.Client），禁用 asyncio，避免与
 FastAPI async endpoint 的同步 provider 路径冲突。任何异常只降级不抛出。
@@ -76,8 +77,12 @@ _JSON_SCHEMA: dict[str, Any] = {
 }
 
 
-def _parse_findings(raw_text: str) -> list[dict[str, Any]] | None:
-    """解析 LLM 输出的 JSON，校验 hazards 结构。失败返回 None。"""
+def _parse_findings(raw_text: str, category_prefix: str = "H") -> list[dict[str, Any]] | None:
+    """解析 LLM 输出的 JSON，校验 hazards 结构。失败返回 None。
+
+    category_prefix：安全域为 "H"（H1-H10），质量域为 "D"（D1-D5），
+    避免质量缺陷码被安全分类过滤器误删。
+    """
     text = (raw_text or "").strip()
     if not text:
         return None
@@ -95,7 +100,7 @@ def _parse_findings(raw_text: str) -> list[dict[str, Any]] | None:
         return None
     findings: list[dict[str, Any]] = []
     for item in hazards:
-        if not isinstance(item, dict) or not str(item.get("category_code", "")).strip().startswith("H"):
+        if not isinstance(item, dict) or not str(item.get("category_code", "")).strip().startswith(category_prefix):
             continue
         findings.append(item)
     return findings or None
@@ -140,6 +145,7 @@ class LLMHazardAnalyzer:
         self.system_prompt = SYSTEM_PROMPT
         self.analyze_prompt = ANALYZE_PROMPT
         self.json_schema = _JSON_SCHEMA
+        self._category_prefix = "H"  # 安全分类码前缀 H1-H10
         self._finding_mapper = llm_finding_to_hazard
 
     def analyze_sync(self, image_path: str) -> tuple[list[dict[str, Any]], bool]:
@@ -152,6 +158,8 @@ class LLMHazardAnalyzer:
             ok, findings = self._claude_cli(image_path)
         elif self.provider == "doubao":
             ok, findings = self._doubao(image_path)
+        elif self.provider == "zhipu":
+            ok, findings = self._zhipu(image_path)
         else:
             return [], False
         if not ok:
@@ -212,7 +220,7 @@ class LLMHazardAnalyzer:
             raw = json.dumps(structured, ensure_ascii=False) if structured else envelope.get("result")
         if not raw:
             return False, []
-        findings = _parse_findings(str(raw))
+        findings = _parse_findings(str(raw), self._category_prefix)
         return True, (findings or [])
 
     @staticmethod
@@ -232,11 +240,14 @@ class LLMHazardAnalyzer:
         except OSError:
             pass
 
-    def _doubao(self, image_path: str) -> tuple[bool, list[dict[str, Any]]]:
-        settings = self.settings
-        base_url = (settings.llm_base_url or "").rstrip("/")
-        api_key = settings.llm_api_key
-        model = settings.llm_model
+    def _openai_vision_call(
+        self, image_path: str, base_url: str, api_key: str, model: str
+    ) -> tuple[bool, list[dict[str, Any]]]:
+        """OpenAI 兼容视觉调用（豆包/智谱共用）：图片 base64 data URI + 双轮消息 + json 约束。
+
+        返回 (是否成功执行, 解析出的原始 finding 列表)。任何异常只降级不抛出。
+        """
+        base_url = (base_url or "").rstrip("/")
         if not base_url or not api_key or not model:
             return False, []
         try:
@@ -274,8 +285,22 @@ class LLMHazardAnalyzer:
             content = data["choices"][0]["message"]["content"]
         except (KeyError, IndexError, TypeError):
             return False, []
-        findings = _parse_findings(str(content))
+        findings = _parse_findings(str(content), self._category_prefix)
         return True, (findings or [])
+
+    def _doubao(self, image_path: str) -> tuple[bool, list[dict[str, Any]]]:
+        """豆包（火山方舟）视觉调用：vision_llm_* 配置，兜底 LLM_*。"""
+        settings = self.settings
+        return self._openai_vision_call(
+            image_path, settings.vision_llm_base_url, settings.vision_llm_api_key, settings.vision_llm_model
+        )
+
+    def _zhipu(self, image_path: str) -> tuple[bool, list[dict[str, Any]]]:
+        """智谱（bigmodel）视觉调用：GLM-4V 支持图像识别，vision_llm_* 配置。"""
+        settings = self.settings
+        return self._openai_vision_call(
+            image_path, settings.vision_llm_base_url, settings.vision_llm_api_key, settings.vision_llm_model
+        )
 
 
 # --------------------------------------------------------------------------
@@ -351,4 +376,5 @@ class QualityLLMHazardAnalyzer(LLMHazardAnalyzer):
         self.system_prompt = QUALITY_SYSTEM_PROMPT
         self.analyze_prompt = QUALITY_ANALYZE_PROMPT
         self.json_schema = QUALITY_JSON_SCHEMA
+        self._category_prefix = "D"  # 质量缺陷码前缀 D1-D5
         self._finding_mapper = quality_llm_finding_to_hazard

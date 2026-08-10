@@ -40,6 +40,10 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
+# IDE（PyCharm / VS Code 本地配置，不入库）
+.idea/
+.vscode/
+
 # External reference projects (safety-scout / safehat_identify / Smart_Construction)
 _ext_src/
 
@@ -50,3 +54,6 @@ archive/
 MBDD2025/
 data_demo/quality_yolo/
 runs/
+
+# pytest 临时目录（测试运行产生的中间产物，不入库）
+.pytest-*/

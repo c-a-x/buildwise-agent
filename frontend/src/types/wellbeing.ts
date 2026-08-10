@@ -4,6 +4,18 @@ export interface WellbeingAnalyzeForm {
   humidity_pct: number
   condition: string
   description?: string
+  city?: string
+}
+
+export interface CareCity {
+  id: string
+  name: string
+}
+
+export interface WeatherSource {
+  city: string | null
+  provider: string | null
+  observed_at: string | null
 }
 
 export interface WellbeingTip {
@@ -56,6 +68,8 @@ export interface WellbeingAnalysisResult {
   is_simulated: boolean
   source: string
   rules_version: string
+  auto?: boolean
+  weather_source?: WeatherSource | null
 }
 
 export interface WellbeingRecordSummary {
@@ -67,6 +81,8 @@ export interface WellbeingRecordSummary {
   heat_index: number | null
   is_simulated: boolean
   created_at: string
+  city?: string | null
+  auto?: boolean
 }
 
 export interface WeatherSnapshot {
@@ -79,6 +95,21 @@ export interface WeatherSnapshot {
   city: string | null
   observed_at: string | null
   is_simulated: boolean
+}
+
+export interface WellbeingSchedule {
+  enabled: boolean
+  time: string
+  city: string | null
+  last_run_at: string | null
+  last_result: string | null
+}
+
+export interface WellbeingStatus {
+  key: string
+  status: string
+  schedule: WellbeingSchedule
+  available_endpoints: string[]
 }
 
 export interface WellbeingTips {

@@ -17,6 +17,18 @@ class WeatherSnapshot:
     is_simulated: bool = False
 
 
+@dataclass(frozen=True)
+class DailyForecast:
+    """当日天气预报快照（工友关怀定时关怀按日最高气温评估高温等级）。"""
+
+    fx_date: str  # 预报日期，如 2026-08-10
+    temp_max_c: float  # 日最高气温
+    temp_min_c: float  # 日最低气温
+    condition_day: str  # 白天天气现象：晴 / 多云 …
+    humidity_pct: float  # 相对湿度
+    uv_index: str  # 紫外线指数（0~11+）
+
+
 class WeatherProvider(Protocol):
     """实时天气数据源（可选增强）。未配置 Provider 时工友关怀回退手动输入。"""
 

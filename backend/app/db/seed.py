@@ -7,6 +7,7 @@ from pathlib import Path
 from app.core.config import settings
 from app.core.security import hash_password
 from app.db.base import Base
+from app.db.seed_green import seed_green_demo
 from app.db.session import SessionLocal, engine
 from app.models import KnowledgeDocument, Project, ProjectMember, User
 from app.utils.ids import new_id
@@ -92,6 +93,7 @@ def seed_database() -> None:
         quality_docs = _ingest_knowledge(db, settings.quality_knowledge_json_path)
         db.commit()
         print(f"Seed complete: {len(users)} users, project={project.code}, knowledge=safety:{safety_docs} quality:{quality_docs}")
+        seed_green_demo(db)
     finally:
         db.close()
 

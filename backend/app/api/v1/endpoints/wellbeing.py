@@ -6,10 +6,11 @@ from app.api.response import ok
 from app.core.config import settings
 from app.db.session import get_db
 from app.models import User
-from app.schemas.wellbeing import WellbeingAnalysisResponse, WellbeingAnalyzeForm
+from app.schemas.wellbeing import WellbeingAnalyzeForm, WeatherSourceRead
+from app.services import care_scheduler
 from app.services.broadcast_service import broadcast_text_alert
 from app.services.project_service import ProjectService
-from app.services.wellbeing_service import WellbeingService
+from app.services.wellbeing_service import WellbeingService, broadcast_message
 
 
 router = APIRouter(prefix="/care", tags=["工友关怀"])
@@ -17,6 +18,8 @@ router = APIRouter(prefix="/care", tags=["工友关怀"])
 
 @router.get("/status")
 def status(http_request: Request, user: User = Depends(get_current_user)):
+    schedule_city = settings.care_schedule_city or settings.weather_city
+    last = care_scheduler.last_run
     return ok(
         {
             "key": "care",
@@ -26,7 +29,20 @@ def status(http_request: Request, user: User = Depends(get_current_user)):
             "description": "天气/环境输入 → 高温分级 + 中暑风险 + 温馨提醒，为工友幸福服务。",
             "planned_inputs": ["温度", "湿度", "天气现象", "现场说明"],
             "planned_outputs": ["高温等级", "中暑风险指数", "作业限制", "温馨提醒", "急救知识", "福利设施"],
-            "available_endpoints": ["POST /api/v1/care/analyze", "GET /api/v1/care/records", "GET /api/v1/care/weather", "GET /api/v1/care/tips"],
+            "available_endpoints": [
+                "POST /api/v1/care/analyze",
+                "GET /api/v1/care/records",
+                "GET /api/v1/care/weather",
+                "GET /api/v1/care/tips",
+                "GET /api/v1/care/cities",
+            ],
+            "schedule": {
+                "enabled": settings.care_schedule_enabled,
+                "time": settings.care_schedule_time,
+                "city": schedule_city,
+                "last_run_at": f"{last.get('date', '')} {last.get('time', '')}".strip() or None,
+                "last_result": last.get("reason") or (f"{last.get('heat_level')} 高温预警" if last.get("heat_level") else None),
+            },
         },
         http_request,
     )
@@ -49,10 +65,11 @@ def analyze(
         condition=form.condition,
         description=form.description,
         requested_by=user.id,
+        weather_source=WeatherSourceRead(city=form.city, provider=None, observed_at=None) if form.city else None,
     )
-    # 红色高温（≥40℃）且配置了 webhook 时，后台推送关怀播报到网络音响/PA，失败静默不阻塞
+    # 高温达到播报档位（默认红色）且配置了 webhook 时，后台推送关怀播报到网络音响/PA，失败静默不阻塞
     if data.broadcast and settings.broadcast_webhook_url:
-        background_tasks.add_task(broadcast_text_alert, _broadcast_message(data), settings)
+        background_tasks.add_task(broadcast_text_alert, broadcast_message(data), settings)
         data.broadcast = True
     else:
         data.broadcast = False
@@ -91,11 +108,12 @@ def weather(http_request: Request, city: str | None = Query(None), user: User = 
     return ok(data.model_dump(mode="json"), http_request)
 
 
+@router.get("/cities")
+def cities(http_request: Request, user: User = Depends(get_current_user)):
+    """城市下拉候选（实时天气联动）：qweather 内置中文城市 + 配置的 WEATHER_CITY。"""
+    return ok({"cities": [item.model_dump(mode="json") for item in WellbeingService(None).cities()]}, http_request)
+
+
 @router.get("/tips")
 def tips(http_request: Request, user: User = Depends(get_current_user)):
     return ok(WellbeingService(None).tips().model_dump(mode="json"), http_request)
-
-
-def _broadcast_message(data: WellbeingAnalysisResponse) -> str:
-    """红色高温关怀播报文案。"""
-    return f"高温红色预警！当前气温{round(data.temperature_c)}℃，已达当日最高气温40℃以上，应当立即停止室外露天作业，转移到阴凉处休息，注意多喝淡盐水。"

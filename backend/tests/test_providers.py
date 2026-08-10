@@ -14,7 +14,8 @@ from app.workflow.graph import build_workflow
 
 
 def test_default_factory_returns_offline_providers():
-    settings = Settings()
+    # 显式指定离线文本 Provider：类默认值在 import 时从 .env 求值，无法在测试期隔离
+    settings = Settings(text_provider="template")
 
     assert isinstance(build_vision_provider(settings), MockVisionProvider)
     assert isinstance(build_retrieval_provider(settings), LocalKeywordRetrievalProvider)
@@ -31,7 +32,13 @@ def test_factory_rejects_unknown_provider_name():
 
 
 def test_factory_rejects_unconfigured_optional_text_provider():
-    settings = Settings(text_provider="openai_compatible")
+    # 显式置空 LLM 配置：断言缺 key 报错，不依赖 .env
+    settings = Settings(
+        text_provider="openai_compatible",
+        llm_base_url="",
+        llm_api_key="",
+        llm_model="",
+    )
 
     with pytest.raises(AppError, match="TEXT_PROVIDER") as error:
         build_text_provider(settings)

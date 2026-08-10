@@ -10,7 +10,9 @@ from app.core.exceptions import AppError, NotFoundError
 from app.models import Project, WellbeingRecord
 from app.providers.factory import build_weather_provider
 from app.providers.wellbeing import WellbeingRules, wellbeing_rules
+from app.providers.weather.qweather import CITY_NAMES
 from app.schemas.wellbeing import (
+    CareCity,
     FacilityRead,
     FirstAidStageRead,
     HeatLevelRead,
@@ -19,8 +21,23 @@ from app.schemas.wellbeing import (
     WellbeingTips,
     WellbeingTipRead,
     WeatherRead,
+    WeatherSourceRead,
 )
 from app.utils.ids import new_id
+
+# 广播触发档位：red=仅红色高温；orange=橙/红色高温（定时关怀按预报日最高气温时用橙档更早预警）
+_BROADCAST_LEVEL_ORDER = {"none": 0, "yellow": 1, "orange": 2, "red": 3}
+
+_BROADCAST_MESSAGES = {
+    "red": "高温红色预警！当前气温{}℃，已达当日最高气温40℃以上，应当立即停止当日室外露天作业，转移到阴凉处休息，注意多喝淡盐水。",
+    "orange": "高温橙色预警！当前气温{}℃，已达当日最高气温37℃以上，全天室外露天作业累计不超过6小时，气温最高时段3小时内不得安排室外露天作业，请做好防暑降温。",
+}
+
+
+def broadcast_message(data: WellbeingAnalysisResponse) -> str:
+    """关怀播报文案（按高温等级）：端点与定时调度器共用。非红色/橙色高温返回空串。"""
+    template = _BROADCAST_MESSAGES.get(data.heat_level)
+    return template.format(round(data.temperature_c)) if template else ""
 
 
 class WellbeingService:
@@ -42,7 +59,10 @@ class WellbeingService:
         humidity_pct: float,
         condition: str,
         description: str,
-        requested_by: str,
+        requested_by: str | None = None,
+        auto: bool = False,
+        broadcast_threshold: str = "red",
+        weather_source: WeatherSourceRead | None = None,
     ) -> WellbeingAnalysisResponse:
         rules = wellbeing_rules()
         is_simulated = bool(rules.load_error)
@@ -52,7 +72,10 @@ class WellbeingService:
         heat_index = self._heat_index(temperature_c, humidity_pct)
         uv = rules.condition_uv.get(condition.strip() or "晴", "中")
         restriction = rules.restriction.get(heat_level.level, "")
-        broadcast = heat_level.level == "red" and bool(self.settings.broadcast_webhook_url)
+        broadcast = (
+            _BROADCAST_LEVEL_ORDER.get(heat_level.level, 0) >= _BROADCAST_LEVEL_ORDER.get(broadcast_threshold, 3)
+            and bool(self.settings.broadcast_webhook_url)
+        )
 
         reminders = [
             WellbeingTipRead(id=f"level_{heat_level.level}", text=heat_level.advice)
@@ -94,6 +117,8 @@ class WellbeingService:
                 "broadcast": broadcast,
                 "source": rules.source,
                 "rules_version": rules.version,
+                "auto": auto,
+                "weather_source": weather_source.model_dump() if weather_source else None,
             },
         )
         self.db.add(record)
@@ -147,6 +172,14 @@ class WellbeingService:
             observed_at=snapshot.observed_at.isoformat(),
             is_simulated=snapshot.is_simulated,
         )
+
+    def cities(self) -> list[CareCity]:
+        """城市下拉候选：qweather 内置中文城市 + 配置的 WEATHER_CITY（去重）。"""
+        names = list(CITY_NAMES)
+        configured = self.settings.weather_city.strip()
+        if configured and configured not in names:
+            names.append(configured)
+        return [CareCity(id=name, name=name) for name in names]
 
     def tips(self) -> WellbeingTips:
         rules = wellbeing_rules()
@@ -235,9 +268,15 @@ class WellbeingService:
             is_simulated=record.is_simulated,
             source=str(result.get("source", rules.source)),
             rules_version=str(result.get("rules_version", rules.version)),
+            auto=bool(result.get("auto", False)),
+            weather_source=WeatherSourceRead(**result["weather_source"])
+            if isinstance(result.get("weather_source"), dict)
+            else None,
         )
 
     def _summary(self, record: WellbeingRecord) -> WellbeingRecordSummary:
+        result = record.result_json if isinstance(record.result_json, dict) else {}
+        weather_source = result.get("weather_source")
         return WellbeingRecordSummary(
             analysis_id=record.id,
             project_id=record.project_id,
@@ -247,6 +286,8 @@ class WellbeingService:
             heat_index=record.heat_index,
             is_simulated=record.is_simulated,
             created_at=record.created_at.isoformat(),
+            city=str(weather_source["city"]) if isinstance(weather_source, dict) and weather_source.get("city") else None,
+            auto=bool(result.get("auto", False)),
         )
 
     def _project_name(self, project_id: str) -> str:

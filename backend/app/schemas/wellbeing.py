@@ -11,6 +11,22 @@ class WellbeingAnalyzeForm(BaseModel):
     humidity_pct: float = Field(default=50.0, ge=0, le=100)
     condition: str = Field(default="晴", max_length=16)  # 晴/多云/阴/小雨/中雨/雷阵雨
     description: str = Field(default="", max_length=300)
+    city: str | None = None  # 天气来源城市（实时天气联动时带入，作为记录溯源）
+
+
+class CareCity(BaseModel):
+    """工友关怀城市下拉项。"""
+
+    id: str
+    name: str
+
+
+class WeatherSourceRead(BaseModel):
+    """关怀分析所用天气来源（实时天气联动/定时关怀溯源）。"""
+
+    city: str | None = None
+    provider: str | None = None
+    observed_at: str | None = None  # 观测/预报时间（ISO 或日期字符串）
 
 
 class WellbeingTipRead(BaseModel):
@@ -63,6 +79,8 @@ class WellbeingAnalysisResponse(BaseModel):
     is_simulated: bool
     source: str
     rules_version: str
+    auto: bool = False  # 是否系统定时关怀自动生成（非手动）
+    weather_source: WeatherSourceRead | None = None  # 天气来源（城市/Provider/时间）
 
 
 class WellbeingRecordSummary(BaseModel):
@@ -74,6 +92,8 @@ class WellbeingRecordSummary(BaseModel):
     heat_index: float | None
     is_simulated: bool
     created_at: str
+    city: str | None = None  # 天气来源城市
+    auto: bool = False  # 是否系统定时关怀自动生成
 
 
 class WeatherRead(BaseModel):

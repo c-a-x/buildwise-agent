@@ -15,7 +15,8 @@ def test_capability_discovery_is_a_standalone_function_and_paths_are_resolved():
 
 
 def test_default_offline_capabilities_are_explicit_and_explainable():
-    capabilities = capability_map(Settings())
+    # 显式指定离线文本 Provider：类默认值在 import 时从 .env 求值，无法在测试期隔离
+    capabilities = capability_map(Settings(text_provider="template"))
 
     assert set(capabilities) == {"vision", "retrieval", "text", "speech", "weather", "tts", "broadcast"}
     assert capabilities["vision"]["provider"] == "mock"

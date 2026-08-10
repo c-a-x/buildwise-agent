@@ -305,7 +305,12 @@ def _weather_capability(runtime_settings: Settings) -> ProviderCapability:
         if missing:
             return _capability("weather", "实时天气", provider, "not_configured", False, f"实时天气 OpenWeather 缺少配置：{', '.join(missing)}。", "补齐天气密钥与城市后运行真实天气 smoke test。")
         return _capability("weather", "实时天气", provider, "configured", False, "OpenWeather 配置完整；健康检查不会请求外部天气接口。", "运行真实天气 smoke test 验证网络和城市参数。")
-    return _capability("weather", "实时天气", provider, "unavailable", False, f"不支持的天气 Provider：{provider}。", "将 WEATHER_PROVIDER 改为 off 或 openweather。")
+    if provider == "qweather":
+        missing = [name for name, value in (("WEATHER_API_KEY", runtime_settings.weather_api_key), ("WEATHER_CITY", runtime_settings.weather_city)) if not value]
+        if missing:
+            return _capability("weather", "实时天气", provider, "not_configured", False, f"实时天气和风天气缺少配置：{', '.join(missing)}。", "补齐天气密钥与城市后运行真实天气 smoke test。")
+        return _capability("weather", "实时天气", provider, "configured", False, "和风天气配置完整；健康检查不会请求外部天气接口。", "运行真实天气 smoke test 验证网络和城市参数。")
+    return _capability("weather", "实时天气", provider, "unavailable", False, f"不支持的天气 Provider：{provider}。", "将 WEATHER_PROVIDER 改为 off、openweather 或 qweather。")
 
 
 def _broadcast_capability(runtime_settings: Settings) -> ProviderCapability:

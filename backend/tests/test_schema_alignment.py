@@ -128,7 +128,7 @@ def _schema_details(database_path: Path) -> tuple[set[str], list[dict[str, objec
 
 def test_existing_schema_drift_is_detected_before_alignment(tmp_path: Path) -> None:
     database_path = tmp_path / "legacy.db"
-    _create_legacy_database(database_path, with_data=False, alembic_revision="0009_schema_alignment")
+    _create_legacy_database(database_path, with_data=False, alembic_revision="0010_green_assessment_env_target")
 
     result = _run_alembic(database_path, "check")
 
@@ -165,7 +165,7 @@ def test_0009_aligns_existing_sqlite_schema_without_data_loss(tmp_path: Path) ->
     assert check_result.returncode == 0, f"{check_result.stdout}\n{check_result.stderr}"
 
 
-def test_empty_sqlite_upgrade_reaches_0009_and_metadata_is_aligned(tmp_path: Path) -> None:
+def test_empty_sqlite_upgrade_reaches_0010_and_metadata_is_aligned(tmp_path: Path) -> None:
     database_path = tmp_path / "empty.db"
 
     upgrade_result = _run_alembic(database_path, "upgrade", "head")
@@ -175,7 +175,7 @@ def test_empty_sqlite_upgrade_reaches_0009_and_metadata_is_aligned(tmp_path: Pat
     with engine.connect() as connection:
         revision = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
     engine.dispose()
-    assert revision == "0009_schema_alignment"
+    assert revision == "0010_green_assessment_env_target"
 
     indexes, foreign_keys = _schema_details(database_path)
     assert "ix_agent_runs_module" in indexes

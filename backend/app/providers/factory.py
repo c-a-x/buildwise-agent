@@ -20,6 +20,7 @@ from app.providers.vision.quality_hybrid import QualityHybridVisionProvider
 from app.providers.vision.ultralytics import UltralyticsVisionProvider
 from app.providers.weather.base import WeatherProvider
 from app.providers.weather.openweather import OpenWeatherProvider
+from app.providers.weather.qweather import QWeatherProvider
 
 
 def build_vision_provider(settings: Settings) -> VisionProvider:
@@ -117,4 +118,8 @@ def build_weather_provider(settings: Settings) -> WeatherProvider | None:
         if not settings.weather_api_key:
             return None
         return OpenWeatherProvider(settings.weather_api_base_url, settings.weather_api_key)
+    if settings.weather_provider == "qweather":
+        if not settings.weather_api_key:
+            return None
+        return QWeatherProvider(settings.weather_api_base_url, settings.weather_api_key)
     return None

@@ -11,7 +11,7 @@ import AppState from '@/components/common/AppState.vue'
 import { useAppStore } from '@/stores/app'
 import { useProjectStore } from '@/stores/project'
 import { formatDateTime } from '@/utils/date'
-import type { WellbeingAnalysisResult, WellbeingRecordSummary, WellbeingTips, WeatherSnapshot } from '@/types/wellbeing'
+import type { CareCity, WellbeingAnalysisResult, WellbeingRecordSummary, WellbeingSchedule, WellbeingTips, WeatherSnapshot } from '@/types/wellbeing'
 
 const CONDITIONS = ['晴', '多云', '阴', '小雨', '中雨', '雷阵雨']
 
@@ -31,6 +31,9 @@ const recordsLoading = ref(false)
 const tips = ref<WellbeingTips | null>(null)
 const weather = ref<WeatherSnapshot | null>(null)
 const weatherLoading = ref(true)
+const cities = ref<CareCity[]>([])
+const selectedCity = ref('')
+const schedule = ref<WellbeingSchedule | null>(null)
 
 const modePill = computed(() => (result.value?.is_simulated ? '兜底规则' : '标准规则'))
 const heatBadge = computed(() => result.value?.heat_level ?? 'none')
@@ -59,10 +62,10 @@ function fillSample(): void {
   localError.value = ''
 }
 
-async function loadWeather(): Promise<void> {
+async function loadWeather(city?: string): Promise<void> {
   weatherLoading.value = true
   try {
-    weather.value = await wellbeingApi.weather()
+    weather.value = await wellbeingApi.weather(city || selectedCity.value || undefined)
     if (weather.value.available) {
       temperatureC.value = String(weather.value.temperature_c ?? '')
       humidityPct.value = String(weather.value.humidity_pct ?? '50')
@@ -73,6 +76,28 @@ async function loadWeather(): Promise<void> {
   } finally {
     weatherLoading.value = false
   }
+}
+
+async function loadCities(): Promise<void> {
+  try {
+    cities.value = await wellbeingApi.cities()
+    const initial = weather.value?.city
+    selectedCity.value = initial && cities.value.some((city) => city.id === initial) ? initial : (cities.value[0]?.id ?? '')
+  } catch {
+    cities.value = []
+  }
+}
+
+async function loadStatus(): Promise<void> {
+  try {
+    schedule.value = (await wellbeingApi.status()).schedule
+  } catch {
+    schedule.value = null
+  }
+}
+
+function onCityChange(): void {
+  void loadWeather(selectedCity.value)
 }
 
 async function loadRecords(): Promise<void> {
@@ -101,6 +126,7 @@ async function analyze(): Promise<void> {
       humidity_pct: humidity,
       condition: condition.value,
       description: description.value,
+      city: weather.value?.available ? selectedCity.value : undefined,
     })
     app.showNotice(result.value.heat_level === 'red' ? '关怀分析完成 · 已联动现场语音广播' : '关怀分析完成')
     await loadRecords()
@@ -109,6 +135,12 @@ async function analyze(): Promise<void> {
   } finally {
     analyzing.value = false
   }
+}
+
+async function analyzeWithLiveWeather(): Promise<void> {
+  if (!weather.value?.available) return
+  await loadWeather(selectedCity.value)
+  await analyze()
 }
 
 async function viewRecord(recordId: string): Promise<void> {
@@ -127,7 +159,8 @@ function fmt(value: number | null | undefined, digits = 1): string {
 
 onMounted(async () => {
   if (!projects.projects.length) await projects.loadProjects()
-  await Promise.all([loadWeather(), loadRecords()])
+  await loadWeather() // 先用后端默认城市取一次实时天气，weather.city 用于初始化城市下拉
+  await Promise.all([loadCities(), loadRecords(), loadStatus()])
   try {
     tips.value = await wellbeingApi.tips()
   } catch {
@@ -157,14 +190,24 @@ onMounted(async () => {
             </select>
           </div>
 
+          <div class="form-field">
+            <label>查询城市</label>
+            <select v-model="selectedCity" @change="onCityChange">
+              <option v-if="!cities.length" value="">默认城市</option>
+              <option v-for="city in cities" :key="city.id" :value="city.id">{{ city.name }}</option>
+            </select>
+          </div>
+
           <div class="weather-card" :class="{ 'is-live': weather?.available }">
             <div class="weather-card-head">
               <AppIcon name="sun" :size="16" />
               <strong>{{ weather?.available ? `实时天气 · ${weather.city}` : '实时天气' }}</strong>
               <span v-if="weatherLoading" class="mono">获取中…</span>
+              <button v-else type="button" class="button-icon" title="刷新天气" @click="onCityChange"><AppIcon name="refresh" :size="14" /></button>
             </div>
             <template v-if="weather?.available">
               <p class="weather-live">{{ weather.condition }} · {{ fmt(weather.temperature_c) }}℃ · 湿度 {{ fmt(weather.humidity_pct, 0) }}% <span class="mono">（{{ weather.provider }}）</span></p>
+              <p v-if="weather.observed_at" class="helper-text">观测时间 {{ formatDateTime(weather.observed_at) }}</p>
               <p class="helper-text">已用实时天气预填下表，可按现场情况修改后分析。</p>
             </template>
             <template v-else>
@@ -196,6 +239,9 @@ onMounted(async () => {
             <input v-model="description" maxlength="300" placeholder="如 一号楼西侧屋面钢筋绑扎作业面" />
           </div>
 
+          <button type="button" class="secondary-button button-block" :disabled="analyzing || !weather?.available || weatherLoading" @click="analyzeWithLiveWeather">
+            <AppIcon name="spark" :size="16" />用实时天气一键分析
+          </button>
           <button type="button" class="secondary-button button-block" @click="fillSample"><AppIcon name="sun" :size="16" />填入示例天气</button>
           <p v-if="localError" class="error-text">{{ localError }}</p>
           <button type="button" class="primary-button button-block" :disabled="analyzing" @click="analyze">
@@ -217,6 +263,10 @@ onMounted(async () => {
               <p class="section-kicker">HEAT LEVEL</p>
               <h3>{{ result.heat_level_name }}</h3>
               <p>{{ result.advice }}</p>
+              <p v-if="result.auto || result.weather_source?.city" class="source-note">
+                <template v-if="result.auto"><AppIcon name="clock" :size="13" />系统定时关怀</template>
+                <template v-if="result.weather_source?.city"><AppIcon name="sun" :size="13" />{{ result.weather_source.city }}<template v-if="result.weather_source.provider"> · {{ result.weather_source.provider }}</template><template v-if="result.weather_source.observed_at"> · {{ result.weather_source.observed_at }}</template></template>
+              </p>
               <span v-if="result.broadcast" class="broadcast-note"><AppIcon name="speaker" :size="14" />红色高温 · 已联动现场语音广播</span>
             </div>
           </div>
@@ -266,17 +316,27 @@ onMounted(async () => {
       </div>
     </div>
 
+    <section v-if="schedule" class="card schedule-card">
+      <div class="card-head"><div><p class="section-kicker">SCHEDULE</p><h3>定时关怀</h3></div><span class="mono">{{ schedule.enabled ? `每日 ${schedule.time}` : '未启用' }}</span></div>
+      <p class="schedule-text">
+        <template v-if="schedule.enabled">每天 <b>{{ schedule.time }}</b> 按{{ schedule.city || '配置城市' }}预报的当日最高气温自动评估高温等级并写入关怀历史，橙/红色高温自动联动现场语音广播。</template>
+        <template v-else>未启用定时关怀，可在后端配置 CARE_SCHEDULE_ENABLED=true 开启。</template>
+        <small v-if="schedule.last_run_at">最近执行：{{ schedule.last_run_at }}{{ schedule.last_result ? ' · ' + schedule.last_result : '' }}</small>
+      </p>
+    </section>
+
     <section class="card history-card">
       <div class="card-head"><div><p class="section-kicker">HISTORY</p><h3>关怀历史</h3></div><span class="mono">{{ records.length }} 条</span></div>
       <div v-if="recordsLoading" class="table-wrap"><div class="loading-dots">正在加载历史</div></div>
       <div v-else-if="!records.length" class="table-wrap"><p class="muted-copy">暂无关怀记录，完成一次分析后这里会显示历史清单。</p></div>
       <div v-else class="table-wrap">
         <table class="data-table">
-          <thead><tr><th>分析编号</th><th>项目</th><th>高温等级</th><th class="align-right">中暑风险</th><th>时间</th><th class="action-cell">操作</th></tr></thead>
+          <thead><tr><th>分析编号</th><th>项目</th><th>来源</th><th>高温等级</th><th class="align-right">中暑风险</th><th>时间</th><th class="action-cell">操作</th></tr></thead>
           <tbody>
             <tr v-for="entry in records" :key="entry.analysis_id">
               <td><strong>{{ entry.analysis_id }}</strong><small>{{ entry.heat_index ? `体感 ${fmt(entry.heat_index)}℃` : '—' }}</small></td>
               <td>{{ entry.project_name }}</td>
+              <td><span v-if="entry.auto" class="auto-badge">定时</span><span>{{ entry.city || '—' }}</span></td>
               <td><span class="status-pill" :class="`heat-${entry.heat_level}`">{{ heatLabel(entry.heat_level) }}</span></td>
               <td class="align-right"><strong>{{ entry.risk_index }}</strong> <span class="mono">{{ riskTierLabel(entry.risk_index) }}</span></td>
               <td>{{ formatDateTime(entry.created_at) }}</td>
@@ -313,6 +373,13 @@ onMounted(async () => {
 .heat-banner-copy p:not(.section-kicker) { margin: 0; font-size: 12px; color: var(--text-soft); line-height: 1.6; }
 .broadcast-note { display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; color: var(--danger); font-size: 11px; font-weight: 700; }
 .broadcast-note .app-icon { flex: none; }
+.source-note { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 5px 0 0; color: var(--text-soft); font-size: 11px; }
+.source-note .app-icon { flex: none; color: var(--blue); }
+.auto-badge { display: inline-block; margin-right: 6px; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); font-size: 10px; font-weight: 700; }
+.schedule-card { margin-bottom: 18px; }
+.schedule-text { margin: 0; font-size: 12px; color: var(--text-soft); line-height: 1.7; }
+.schedule-text b { color: var(--text); }
+.schedule-text small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
 .restriction-text { margin: 0; font-size: 12px; color: var(--text-soft); line-height: 1.7; }
 .allowance-note { display: flex; align-items: flex-start; gap: 7px; margin: 8px 0 0; color: var(--text-soft); font-size: 11px; line-height: 1.6; }
 .allowance-note .app-icon { flex: none; margin-top: 1px; color: var(--blue); }

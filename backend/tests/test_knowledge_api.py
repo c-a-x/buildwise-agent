@@ -2,11 +2,23 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from app.core.config import Settings
 from app.knowledge.index import KnowledgeIndex
 from app.knowledge.types import KnowledgeClause
 from app.services import knowledge_service as knowledge_service_module
 from tests.conftest import login
+
+
+@pytest.fixture(autouse=True)
+def _offline_knowledge_settings(monkeypatch):
+    """隔离本地 .env：chat 默认走离线拼装（rag_only），不依赖环境是否配置了 LLM。"""
+    monkeypatch.setattr(
+        knowledge_service_module,
+        "default_settings",
+        Settings(text_provider="template"),
+    )
 
 def test_knowledge_search_and_index_status_are_source_backed(client):
     headers = login(client)

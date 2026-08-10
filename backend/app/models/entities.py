@@ -258,6 +258,64 @@ class WellbeingRecord(Base):
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
 
 
+class GreenAssessment(Base):
+    """四节一环保评估：五维输入 → 总分 + 等级（不合格/合格/优良/优秀）+ 报告。"""
+
+    __tablename__ = "green_assessments"
+
+    id = Column(String(64), primary_key=True, default=lambda: new_id("GAS"))
+    project_id = Column(String(64), ForeignKey("projects.id"), nullable=False)
+    requested_by = Column(String(64), ForeignKey("users.id"), nullable=True)
+    title = Column(Text, default="", nullable=False)
+    area_m2 = Column(Float, nullable=True)
+    total_score = Column(Float, nullable=True)
+    level = Column(String(16), nullable=True)
+    is_simulated = Column(Boolean, default=False, nullable=False)
+    report_preview = Column(Text, default="", nullable=False)
+    result_json = Column(JSON, default=dict, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+
+class GreenEnvRecord(Base):
+    """环保监测台账：扬尘/噪声/污水/固废日常读数，超标项写入 alerts_json。"""
+
+    __tablename__ = "green_env_records"
+    __table_args__ = (UniqueConstraint("project_id", "record_date", name="uq_green_env_record_project_date"), Index("ix_green_env_records_project_date", "project_id", "record_date"))
+
+    id = Column(String(64), primary_key=True, default=lambda: new_id("ENV"))
+    project_id = Column(String(64), ForeignKey("projects.id"), nullable=False)
+    requested_by = Column(String(64), ForeignKey("users.id"), nullable=True)
+    record_date = Column(Date, nullable=False)
+    pm25 = Column(Float, nullable=True)
+    pm10 = Column(Float, nullable=True)
+    tsp = Column(Float, nullable=True)
+    noise_day_db = Column(Float, nullable=True)
+    noise_night_db = Column(Float, nullable=True)
+    cod_mg = Column(Float, nullable=True)
+    ss_mg = Column(Float, nullable=True)
+    ph = Column(Float, nullable=True)
+    solid_waste_t = Column(Float, nullable=True)
+    alerts_json = Column(JSON, default=list, nullable=False)
+    has_alerts = Column(Boolean, default=False, nullable=False)
+    result_json = Column(JSON, default=dict, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+
+class GreenTarget(Base):
+    """项目碳排强度目标（tCO2e/m²），一项目一行。"""
+
+    __tablename__ = "green_targets"
+
+    id = Column(String(64), primary_key=True, default=lambda: new_id("TGT"))
+    project_id = Column(String(64), ForeignKey("projects.id"), nullable=False, unique=True)
+    target_intensity = Column(Float, nullable=True)
+    note = Column(Text, default="", nullable=False)
+    created_by = Column(String(64), ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     __table_args__ = (Index("ix_audit_logs_user_created", "user_id", "created_at"),)

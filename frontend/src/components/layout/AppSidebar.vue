@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
+import { systemApi, type ProviderCapability } from '@/api/system'
 import AppIcon, { type IconName } from '@/components/common/AppIcon.vue'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
@@ -24,6 +25,29 @@ const groups: NavigationGroup[] = [
 
 const visibleGroups = computed(() => groups.map((group) => ({ ...group, items: group.items.filter((item) => !item.roles || (auth.user && item.roles.includes(auth.user.role))) })).filter((group) => group.items.length))
 const isActive = (to: string): boolean => route.path === to || route.path.startsWith(`${to}/`)
+
+// 侧栏底部 Provider 状态：读取 /health 真实能力状态，而非硬编码"离线模拟"
+const CORE_KEYS = new Set(['vision', 'retrieval', 'text'])
+const aiStatus = ref<{ label: string; detail: string; online: boolean }>({ label: '读取状态…', detail: '', online: false })
+
+onMounted(async () => {
+  try {
+    const runtime = await systemApi.health()
+    const core = (Object.values(runtime.capabilities ?? {}) as ProviderCapability[]).filter((capability) => capability && CORE_KEYS.has(capability.key))
+    const connected = core.filter((capability) => !capability.is_simulated && capability.status !== 'not_configured' && capability.status !== 'unavailable')
+    if (connected.length === 0) {
+      aiStatus.value = { label: '离线模拟 Provider', detail: '无需外部 API Key', online: false }
+    } else {
+      aiStatus.value = {
+        label: connected.length >= 3 ? 'AI 服务在线' : 'AI 服务已接入',
+        detail: connected.map((capability) => capability.name).join(' · '),
+        online: true,
+      }
+    }
+  } catch {
+    aiStatus.value = { label: '状态未知', detail: '无法连接后端', online: false }
+  }
+})
 </script>
 
 <template>
@@ -41,6 +65,6 @@ const isActive = (to: string): boolean => route.path === to || route.path.starts
         </RouterLink>
       </div>
     </nav>
-    <div class="sidebar-foot"><div class="system-status"><span class="status-dot online" /><div><strong>离线模拟 Provider</strong><small>无需外部 API Key</small></div></div></div>
+    <div class="sidebar-foot"><div class="system-status"><span class="status-dot" :class="aiStatus.online ? 'online' : 'muted'" /><div><strong>{{ aiStatus.label }}</strong><small>{{ aiStatus.detail }}</small></div></div></div>
   </aside>
 </template>

@@ -51,6 +51,16 @@ def test_shipped_factor_library_has_verified_grid_factor():
     assert grid.factor == 0.0005703
 
 
+def test_material_factors_use_singular_category():
+    # 回归：factors.json 顶层材料键是复数 "materials"，需映射为 "material"，
+    # 否则前端「材料清单」按 category === 'material' 过滤时下拉没有任何选项。
+    library = load_factor_library(settings.green_factors_path)
+    material = [factor for factor in library.factors if factor.category == "material"]
+    assert material, "材料因子应映射为 category=material"
+    assert all(factor.category == "material" for factor in material)
+    assert {factor.category for factor in library.factors} == {"material", "energy", "transport"}
+
+
 def test_status_available(client):
     from tests.conftest import login
 

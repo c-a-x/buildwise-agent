@@ -19,6 +19,8 @@ const quickQuestions = ['进入现场前要检查什么？', '安全帽应该怎
 const projectId = computed(() => projects.currentProject?.id || '')
 
 function sourceLabel(source: string): string {
+  if (source === 'rag_llm') return 'LLM 规范回答'
+  if (source === 'llm_general') return 'LLM 建议 · 模拟'
   if (source === 'rag') return '规范检索'
   if (source === 'template') return '模板回答 · 模拟'
   return source

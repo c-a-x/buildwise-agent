@@ -1,6 +1,6 @@
 import http from './http'
 import type { ApiEnvelope } from '@/types/api'
-import type { WeatherSnapshot, WellbeingAnalysisResult, WellbeingAnalyzeForm, WellbeingRecordSummary, WellbeingTips } from '@/types/wellbeing'
+import type { CareCity, WeatherSnapshot, WellbeingAnalysisResult, WellbeingAnalyzeForm, WellbeingRecordSummary, WellbeingStatus, WellbeingTips } from '@/types/wellbeing'
 
 export const wellbeingApi = {
   async analyze(payload: WellbeingAnalyzeForm): Promise<WellbeingAnalysisResult> {
@@ -17,6 +17,14 @@ export const wellbeingApi = {
   },
   async weather(city?: string): Promise<WeatherSnapshot> {
     const response = await http.get<ApiEnvelope<WeatherSnapshot>>('/care/weather', { params: city ? { city } : {} })
+    return response.data.data
+  },
+  async cities(): Promise<CareCity[]> {
+    const response = await http.get<ApiEnvelope<{ cities: CareCity[] }>>('/care/cities')
+    return response.data.data.cities
+  },
+  async status(): Promise<WellbeingStatus> {
+    const response = await http.get<ApiEnvelope<WellbeingStatus>>('/care/status')
     return response.data.data
   },
   async tips(): Promise<WellbeingTips> {

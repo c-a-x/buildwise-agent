@@ -165,7 +165,7 @@ TEXT_PROVIDER=template
 
 - **10 类**：Hardhat / Mask / NO-Hardhat / NO-Mask / NO-Safety Vest / Person / Safety Cone / Safety Vest / machinery / vehicle；
 - **违规映射**：NO-Hardhat → 未佩戴安全帽（高危）、NO-Mask → 未佩戴口罩（中危）、NO-Safety Vest → 未穿反光安全背心（中危），均会生成整改工单草稿；已合规佩戴（Hardhat/Mask/Safety Vest/Safety Cone）不生成隐患；
-- **模型**：`backend/storage/models/yolov8n-10cls.pt`（在 [Construction Site Safety Image Dataset](https://www.kaggle.com/datasets/snehilsanyal/construction-site-safety-image-dataset-roboflow) 上训练的 10 类 YOLOv8n）。模型为运行时数据（已被 `.gitignore` 排除），需按下方说明放置；
+- **模型**：`backend/storage/models/yolov8n-10cls.pt`（在 [Construction Site Safety Image Dataset](https://www.kaggle.com/datasets/snehilsanyal/construction-site-safety-image-dataset-roboflow) 上训练的 10 类 YOLOv8n）。模型权重已随仓库提交（三个权重共约 36MB，位于 `backend/storage/models/`），克隆后开箱即用；需替换为自行训练产物时见下节「模型放置」；
 - **检测图**：前端在浏览器内基于检测框坐标叠加绘制，切换「原图 / 检测图」即可查看，后端无需额外标注文件。
 
 配置（`backend/.env`）：
@@ -185,7 +185,7 @@ VISION_LLM_PROVIDER=off          # claude_cli | doubao | off
 
 **降级规则**：YOLO 模型缺失、加载失败或未安装 `backend[vision]` 依赖时，自动降级为模拟结果并显式标记 `is_simulated=true`，不会中断请求；`VISION_LLM_PROVIDER=off` 或 LLM 调用失败时仅保留 YOLO 检测（`is_simulated=false`，仍为真实检测）。
 
-**模型放置**：模型文件是运行期数据、不入 Git。可从数据集训练产物中复制 `results_yolov8n_100e/kaggle/working/runs/detect/train/weights/best.pt` 到 `backend/storage/models/yolov8n-10cls.pt`，或用 ultralytics 在同一 10 类数据集上自行训练并替换。
+**模型放置**：三个权重（`yolov8n.pt` / `yolov8n-10cls.pt` / `yolov8n-5cls-mbdd.pt`）默认已随仓库提交。若要替换为自行训练/下载的模型，直接覆盖对应路径即可——例如从训练产物复制 `results_yolov8n_100e/kaggle/working/runs/detect/train/weights/best.pt` 到 `backend/storage/models/yolov8n-10cls.pt`，或用 ultralytics 在同一 10 类数据集上自行训练并替换。
 
 ## 质量巡检（quality 模块）
 

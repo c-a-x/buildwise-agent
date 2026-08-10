@@ -1,10 +1,11 @@
 <script setup lang="ts">
 /** 工友关怀：天气/环境输入 → CareAgent 高温分级 + 中暑风险 + 温馨提醒，红色高温联动语音广播。 */
 
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 import { getApiError } from '@/api/http'
 import { wellbeingApi } from '@/api/wellbeing'
+import { ensureAlertAudio, startAlert, stopAlert } from '@/lib/alarmSound'
 import AppIcon from '@/components/common/AppIcon.vue'
 import AppPageHeader from '@/components/common/AppPageHeader.vue'
 import AppState from '@/components/common/AppState.vue'
@@ -37,6 +38,30 @@ const schedule = ref<WellbeingSchedule | null>(null)
 
 const modePill = computed(() => (result.value?.is_simulated ? '兜底规则' : '标准规则'))
 const heatBadge = computed(() => result.value?.heat_level ?? 'none')
+
+// 本地蜂鸣：橙色/红色高温（≥37℃）在浏览器本机响铃，无需任何硬件或后端配置
+const BUZZER_LEVELS = ['orange', 'red'] as const
+const alarmActive = ref(false)
+
+function syncAlarmSound(): void {
+  const shouldBuzz = result.value?.heat_level
+    ? (BUZZER_LEVELS as readonly string[]).includes(result.value.heat_level)
+    : false
+  if (shouldBuzz) {
+    startAlert()
+    alarmActive.value = true
+  } else {
+    stopAlert()
+    alarmActive.value = false
+  }
+}
+
+function stopBuzzer(): void {
+  stopAlert()
+  alarmActive.value = false
+}
+
+onUnmounted(stopBuzzer)
 
 function heatLabel(level: string): string {
   return { none: '无高温', yellow: '黄色预警', orange: '橙色预警', red: '红色预警' }[level] ?? level
@@ -112,6 +137,7 @@ async function loadRecords(): Promise<void> {
 }
 
 async function analyze(): Promise<void> {
+  ensureAlertAudio() // 在用户点击手势内解锁 AudioContext
   localError.value = ''
   const temp = Number(temperatureC.value)
   const humidity = Number(humidityPct.value)
@@ -128,7 +154,12 @@ async function analyze(): Promise<void> {
       description: description.value,
       city: weather.value?.available ? selectedCity.value : undefined,
     })
-    app.showNotice(result.value.heat_level === 'red' ? '关怀分析完成 · 已联动现场语音广播' : '关怀分析完成')
+    syncAlarmSound()
+    const actions: string[] = []
+    if (result.value.broadcast) actions.push('现场语音广播')
+    if (result.value.buzzer) actions.push('现场蜂鸣器')
+    if (alarmActive.value) actions.push('本地蜂鸣器')
+    app.showNotice(actions.length ? `关怀分析完成 · 已联动${actions.join('、')}` : '关怀分析完成')
     await loadRecords()
   } catch (cause) {
     localError.value = getApiError(cause)
@@ -138,6 +169,7 @@ async function analyze(): Promise<void> {
 }
 
 async function analyzeWithLiveWeather(): Promise<void> {
+  ensureAlertAudio() // 一键分析前先解锁，确保 await 后仍能在手势内出声
   if (!weather.value?.available) return
   await loadWeather(selectedCity.value)
   await analyze()
@@ -147,6 +179,7 @@ async function viewRecord(recordId: string): Promise<void> {
   localError.value = ''
   try {
     result.value = await wellbeingApi.record(recordId)
+    syncAlarmSound()
   } catch (cause) {
     localError.value = getApiError(cause)
   }
@@ -247,7 +280,7 @@ onMounted(async () => {
           <button type="button" class="primary-button button-block" :disabled="analyzing" @click="analyze">
             <AppIcon name="spark" :size="16" />{{ analyzing ? '分析中…' : '开始关怀分析' }}
           </button>
-          <p class="helper-text">高温分级与作业限制依据《防暑降温措施管理办法》（安监总安健〔2012〕89号）；红色高温（≥40℃）自动联动现场语音广播。</p>
+          <p class="helper-text">高温分级与作业限制依据《防暑降温措施管理办法》（安监总安健〔2012〕89号）；红色高温（≥40℃）自动联动现场语音广播（已配置时），橙色/红色高温在本机自动响蜂鸣提醒。</p>
         </div>
       </section>
 
@@ -267,7 +300,9 @@ onMounted(async () => {
                 <template v-if="result.auto"><AppIcon name="clock" :size="13" />系统定时关怀</template>
                 <template v-if="result.weather_source?.city"><AppIcon name="sun" :size="13" />{{ result.weather_source.city }}<template v-if="result.weather_source.provider"> · {{ result.weather_source.provider }}</template><template v-if="result.weather_source.observed_at"> · {{ result.weather_source.observed_at }}</template></template>
               </p>
-              <span v-if="result.broadcast" class="broadcast-note"><AppIcon name="speaker" :size="14" />红色高温 · 已联动现场语音广播</span>
+              <span v-if="result.broadcast" class="broadcast-note"><AppIcon name="speaker" :size="14" />高温警告 · 已联动现场语音广播</span>
+              <span v-if="result.buzzer" class="broadcast-note"><AppIcon name="bell" :size="14" />高温警告 · 已联动现场蜂鸣器</span>
+              <button v-if="alarmActive" type="button" class="buzzer-stop" @click="stopBuzzer"><AppIcon name="bell" :size="14" />本地蜂鸣响铃中 · 点击停止</button>
             </div>
           </div>
 
@@ -373,6 +408,9 @@ onMounted(async () => {
 .heat-banner-copy p:not(.section-kicker) { margin: 0; font-size: 12px; color: var(--text-soft); line-height: 1.6; }
 .broadcast-note { display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; color: var(--danger); font-size: 11px; font-weight: 700; }
 .broadcast-note .app-icon { flex: none; }
+.buzzer-stop { display: inline-flex; align-items: center; gap: 5px; margin-top: 6px; padding: 4px 10px; border: 1px solid var(--danger); border-radius: 999px; background: var(--surface); color: var(--danger); font-size: 11px; font-weight: 700; cursor: pointer; }
+.buzzer-stop:hover { background: var(--danger); color: #fff; }
+.buzzer-stop .app-icon { flex: none; }
 .source-note { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 5px 0 0; color: var(--text-soft); font-size: 11px; }
 .source-note .app-icon { flex: none; color: var(--blue); }
 .auto-badge { display: inline-block; margin-right: 6px; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); font-size: 10px; font-weight: 700; }

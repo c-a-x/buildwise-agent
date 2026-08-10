@@ -182,6 +182,45 @@ def test_red_heat_without_webhook_returns_broadcast_false(client):
     assert data["broadcast"] is False
 
 
+# ---------- 蜂鸣器硬报警联动 ----------
+
+
+def _enable_buzzer_webhook(monkeypatch):
+    import app.api.v1.endpoints.wellbeing as wellbeing_endpoint
+    import app.services.wellbeing_service as wellbeing_service_module
+
+    webhook_settings = replace(settings, alert_webhook_url="http://test/buzzer")
+    monkeypatch.setattr(wellbeing_endpoint, "settings", webhook_settings)
+    monkeypatch.setattr(wellbeing_service_module, "default_settings", webhook_settings)
+    calls: list[tuple[str, str | None]] = []
+    monkeypatch.setattr(wellbeing_endpoint, "notify_hard_alert", lambda hazards, url, message=None: calls.append((url, message)))
+    return calls
+
+
+def test_red_heat_triggers_buzzer(client, monkeypatch):
+    calls = _enable_buzzer_webhook(monkeypatch)
+    data = _analyze(client, 41)
+    assert data["buzzer"] is True
+    assert len(calls) == 1
+    url, message = calls[0]
+    assert url == "http://test/buzzer"
+    assert "高温红色预警" in (message or "")
+
+
+def test_non_red_heat_does_not_trigger_buzzer(client, monkeypatch):
+    calls = _enable_buzzer_webhook(monkeypatch)
+    data = _analyze(client, 35)
+    assert data["buzzer"] is False
+    assert calls == []
+
+
+def test_red_heat_without_buzzer_webhook_returns_buzzer_false(client):
+    # 档位达到（broadcast_eligible=True），但未配置 ALERT_WEBHOOK_URL 时不联动蜂鸣器
+    data = _analyze(client, 41)
+    assert data["broadcast_eligible"] is True
+    assert data["buzzer"] is False
+
+
 # ---------- 历史记录 ----------
 
 

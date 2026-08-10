@@ -277,7 +277,7 @@ VISION_LLM_PROVIDER=off          # claude_cli | doubao | zhipu | off
 
 ## 工友关怀（care 模块）
 
-「工友关怀」页（`/worker-wellbeing`）为工友幸福服务：输入天气/环境数据（温度、湿度、天气现象），**CareAgent** 计算高温等级、中暑风险指数与体感温度，输出温馨、可执行的关怀提醒、中暑急救知识与现场福利设施信息，红色高温（≥40℃）自动联动网络音响/PA 语音广播。
+「工友关怀」页（`/worker-wellbeing`）为工友幸福服务：输入天气/环境数据（温度、湿度、天气现象），**CareAgent** 计算高温等级、中暑风险指数与体感温度，输出温馨、可执行的关怀提醒、中暑急救知识与现场福利设施信息，红色高温（≥40℃）自动联动网络音响/PA 语音广播与现场蜂鸣器。
 
 - **法规依据**：高温三级分级引用《防暑降温措施管理办法》（安监总安健〔2012〕89号）——日最高气温≥40℃ 停止当日室外露天作业；37–40℃ 全天室外作业累计≤6小时、气温最高时段3小时内不得安排室外露天作业；35–37℃ 换班轮休、缩短连续作业、不得加班；不得安排怀孕女职工和未成年工在 35℃ 以上从事室外露天作业；35℃ 以上室外作业应发放高温津贴；
 - **规则库**：`data_demo/wellbeing/rules.json` 可编辑——高温分级、作业限制条文、温馨提示库（按高温档触发）、中暑急救知识（先兆/轻症/重症热射病）、福利设施信息卡（饮水点/休息亭/防暑药领取点/绿豆汤时段）；修改文件后重启后端生效；
@@ -286,10 +286,11 @@ VISION_LLM_PROVIDER=off          # claude_cli | doubao | zhipu | off
 - **页面内联动**：天气卡支持城市下拉（候选来自 `GET /care/cities`：qweather 内置中文城市 + 配置的 `WEATHER_CITY`）、一键刷新并显示观测时间；「用实时天气一键分析」按所选城市实时天气直接出分析；关怀记录带 `weather_source`（城市/Provider/时间）溯源，历史表显示来源列，系统定时记录带「定时」徽标；
 - **定时关怀**：配置 `CARE_SCHEDULE_ENABLED=true` 后，后端每日 `CARE_SCHEDULE_TIME`（默认 `08:00`）按 `CARE_SCHEDULE_CITY`/`WEATHER_CITY` 的**当日最高气温预报**（qweather 3 天预报）自动评估高温等级，写入一条系统关怀记录（`auto=true`、归属默认项目、无操作人），并**按橙/红色预报档自动联动语音广播**（手动分析仍为红色档才播报）；`GET /care/status` 返回 `schedule`（启用状态/时间/城市/最近执行）；`CARE_SCHEDULE_CITY` 缺省取 `WEATHER_CITY`；
 - **广播联动**：手动分析结果达红色高温且配置 `BROADCAST_WEBHOOK_URL` 时，后台推送关怀播报（如"高温红色预警！应当立即停止室外露天作业…"）到网络音响/PA，复用语音广播通道（文字 + 可选 TTS 音频、失败静默）；
+- **蜂鸣器联动**：高温达到播报档位（手动红色 ≥40℃、定时橙/红 ≥37℃）且配置 `ALERT_WEBHOOK_URL` 时，后台 `POST` 到 ESP32 蜂鸣器硬报警（payload 带 `message` 关怀文案 + 空 `hazards`，与实时检测隐患共用同一 webhook，固件可按有无 `message` 区分场景）；分析结果 `buzzer=true` 并在页面显示「已联动现场蜂鸣器」徽标，`GET /care/status` 的 `hard_alert.enabled` 反映接线状态；
 - **接口**：
   | 接口 | 说明 |
   | --- | --- |
-  | `POST /api/v1/care/analyze` | JSON 提交 `project_id/temperature_c/humidity_pct/condition/description`（可选 `city` 天气来源）→ 高温等级 + 中暑风险 + 温馨提醒 + 急救 + 设施（红色自动广播） |
+  | `POST /api/v1/care/analyze` | JSON 提交 `project_id/temperature_c/humidity_pct/condition/description`（可选 `city` 天气来源）→ 高温等级 + 中暑风险 + 温馨提醒 + 急救 + 设施（红色自动联动语音广播 + 蜂鸣器） |
   | `GET /api/v1/care/records` | 关怀分析历史（可按 `project_id` 过滤） |
   | `GET /api/v1/care/records/{id}` | 关怀分析详情 |
   | `GET /api/v1/care/weather` | 实时天气（未配置 API 时 `available=false`） |

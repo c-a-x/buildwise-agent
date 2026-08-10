@@ -24,6 +24,7 @@ from app.models import Project
 from app.providers.factory import build_weather_provider
 from app.providers.weather.qweather import QWeatherProvider
 from app.schemas.wellbeing import WeatherSourceRead
+from app.services.alert_service import notify_hard_alert
 from app.services.broadcast_service import broadcast_text_alert
 from app.services.wellbeing_service import WellbeingService, broadcast_message
 
@@ -42,6 +43,7 @@ class ScheduledCareResult:
     heat_level: str | None = None
     project_id: str | None = None
     broadcast: bool = False
+    buzzer: bool = False
     city: str | None = None
 
 
@@ -77,11 +79,14 @@ def run_scheduled_care(db: Session, runtime_settings: Settings | None = None) ->
     )
     if response.broadcast:
         broadcast_text_alert(broadcast_message(response), s)
+    if response.broadcast_eligible and s.alert_webhook_url:
+        notify_hard_alert([], s.alert_webhook_url, broadcast_message(response))
     return ScheduledCareResult(
         skipped=False,
         heat_level=response.heat_level,
         project_id=project.id,
         broadcast=response.broadcast,
+        buzzer=response.broadcast_eligible and bool(s.alert_webhook_url),
         city=city,
     )
 
@@ -94,6 +99,7 @@ def _refresh_last_run(result: ScheduledCareResult) -> None:
             "heat_level": result.heat_level,
             "project_id": result.project_id,
             "broadcast": result.broadcast,
+            "buzzer": result.buzzer,
             "city": result.city,
             "reason": result.reason,
         }

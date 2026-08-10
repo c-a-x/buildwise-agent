@@ -212,6 +212,33 @@ def test_scheduled_care_orange_heat_broadcasts(monkeypatch, db_session):
     assert "高温橙色预警" in calls[0]
 
 
+def test_scheduled_care_red_heat_triggers_buzzer(monkeypatch, db_session):
+    import app.services.care_scheduler as scheduler_module
+
+    buzzer_calls: list[tuple[str, str | None]] = []
+    monkeypatch.setattr(scheduler_module, "notify_hard_alert", lambda hazards, url, message=None: buzzer_calls.append((url, message)))
+    _install_forecast_provider(monkeypatch, 41)
+
+    result = scheduler_module.run_scheduled_care(db_session, replace(_scheduled_settings(), alert_webhook_url="http://test/buzzer"))
+    assert result.broadcast is True
+    assert result.buzzer is True
+    assert len(buzzer_calls) == 1
+    assert buzzer_calls[0][0] == "http://test/buzzer"
+    assert "高温红色预警" in (buzzer_calls[0][1] or "")
+
+
+def test_scheduled_care_none_heat_does_not_trigger_buzzer(monkeypatch, db_session):
+    import app.services.care_scheduler as scheduler_module
+
+    buzzer_calls: list[tuple[str, str | None]] = []
+    monkeypatch.setattr(scheduler_module, "notify_hard_alert", lambda hazards, url, message=None: buzzer_calls.append((url, message)))
+    _install_forecast_provider(monkeypatch, 28)
+
+    result = scheduler_module.run_scheduled_care(db_session, replace(_scheduled_settings(), alert_webhook_url="http://test/buzzer"))
+    assert result.buzzer is False
+    assert buzzer_calls == []
+
+
 def test_scheduled_care_none_heat_persists_without_broadcast(monkeypatch, db_session):
     import app.services.care_scheduler as scheduler_module
 

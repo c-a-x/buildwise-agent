@@ -75,7 +75,9 @@ class WellbeingAnalysisResponse(BaseModel):
     special_groups: str
     first_aid: list[FirstAidStageRead]
     facilities: list[FacilityRead]
-    broadcast: bool  # 是否已联动现场语音广播（红色高温且配置了 webhook）
+    broadcast: bool  # 是否已联动现场语音广播（达到档位且配置了 BROADCAST_WEBHOOK_URL）
+    broadcast_eligible: bool = False  # 是否达到播报/蜂鸣器触发档位（不依赖 webhook 配置）
+    buzzer: bool = False  # 是否已联动现场蜂鸣器硬报警（达到档位且配置了 ALERT_WEBHOOK_URL）
     is_simulated: bool
     source: str
     rules_version: str

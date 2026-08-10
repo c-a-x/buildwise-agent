@@ -72,10 +72,8 @@ class WellbeingService:
         heat_index = self._heat_index(temperature_c, humidity_pct)
         uv = rules.condition_uv.get(condition.strip() or "晴", "中")
         restriction = rules.restriction.get(heat_level.level, "")
-        broadcast = (
-            _BROADCAST_LEVEL_ORDER.get(heat_level.level, 0) >= _BROADCAST_LEVEL_ORDER.get(broadcast_threshold, 3)
-            and bool(self.settings.broadcast_webhook_url)
-        )
+        broadcast_eligible = _BROADCAST_LEVEL_ORDER.get(heat_level.level, 0) >= _BROADCAST_LEVEL_ORDER.get(broadcast_threshold, 3)
+        broadcast = broadcast_eligible and bool(self.settings.broadcast_webhook_url)
 
         reminders = [
             WellbeingTipRead(id=f"level_{heat_level.level}", text=heat_level.advice)
@@ -115,6 +113,7 @@ class WellbeingService:
                 "first_aid": [stage.model_dump() for stage in first_aid],
                 "facilities": [item.model_dump() for item in facilities],
                 "broadcast": broadcast,
+                "broadcast_eligible": broadcast_eligible,
                 "source": rules.source,
                 "rules_version": rules.version,
                 "auto": auto,
@@ -265,6 +264,8 @@ class WellbeingService:
             first_aid=[FirstAidStageRead(**item) for item in result.get("first_aid", [])],
             facilities=[FacilityRead(**item) for item in result.get("facilities", [])],
             broadcast=bool(result.get("broadcast", False)),
+            broadcast_eligible=bool(result.get("broadcast_eligible", False)),
+            buzzer=bool(result.get("buzzer", False)),
             is_simulated=record.is_simulated,
             source=str(result.get("source", rules.source)),
             rules_version=str(result.get("rules_version", rules.version)),

@@ -24,11 +24,18 @@ function useDemo(username: string): void {
   form.password = 'BuildWise123!'
 }
 
+function defaultRouteForRole(role: string | undefined): string {
+  if (role === 'worker') return '/worker-care'
+  if (role === 'quality_inspector') return '/quality'
+  if (role === 'safety_officer') return '/safety/analyze'
+  return '/dashboard'
+}
+
 async function submit(): Promise<void> {
   errorMessage.value = ''
   try {
     await auth.login(form)
-    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/dashboard'
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : defaultRouteForRole(auth.user?.role)
     await router.push(redirect)
   } catch (cause) {
     errorMessage.value = getApiError(cause)

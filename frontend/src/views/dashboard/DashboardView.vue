@@ -7,11 +7,16 @@ import { statsApi, type AnomalyResult } from '@/api/stats'
 import AppIcon from '@/components/common/AppIcon.vue'
 import AppPageHeader from '@/components/common/AppPageHeader.vue'
 import AppState from '@/components/common/AppState.vue'
+import { useAuthStore } from '@/stores/auth'
 import { useProjectStore } from '@/stores/project'
 import { formatDateTime } from '@/utils/date'
 import { riskLabel, statusLabel } from '@/utils/risk'
 
 const projects = useProjectStore()
+const auth = useAuthStore()
+const role = computed(() => auth.user?.role ?? '')
+const canUseSafety = computed(() => ['admin', 'project_manager', 'safety_officer'].includes(role.value))
+const canUseReports = computed(() => ['admin', 'project_manager', 'safety_officer', 'quality_inspector'].includes(role.value))
 const summary = ref<DashboardSummary | null>(null)
 const loading = ref(false)
 const error = ref('')
@@ -66,7 +71,10 @@ watch(() => projects.currentProjectId, load)
 <template>
   <div>
     <AppPageHeader eyebrow="PROJECT CONTROL CENTER" title="项目工作台" :description="projects.currentProject ? `${projects.currentProject.name} · ${projects.currentProject.address}` : '正在载入项目数据'">
-      <template #actions><RouterLink class="primary-button" to="/safety/analyze"><AppIcon name="plus" :size="16" />开始安全分析</RouterLink><RouterLink class="secondary-button" to="/reports/daily"><AppIcon name="report" :size="16" />查看今日日报</RouterLink></template>
+      <template #actions>
+        <RouterLink v-if="canUseSafety" class="primary-button" to="/safety/analyze"><AppIcon name="plus" :size="16" />开始安全分析</RouterLink>
+        <RouterLink v-if="canUseReports" class="secondary-button" to="/reports/daily"><AppIcon name="report" :size="16" />查看今日日报</RouterLink>
+      </template>
     </AppPageHeader>
     <div v-if="error" class="alert alert-error" role="alert">{{ error }}</div>
     <div class="metrics-grid" aria-label="项目关键指标">

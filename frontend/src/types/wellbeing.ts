@@ -65,6 +65,8 @@ export interface WellbeingAnalysisResult {
   first_aid: FirstAidStage[]
   facilities: Facility[]
   broadcast: boolean
+  broadcast_eligible?: boolean
+  buzzer?: boolean
   is_simulated: boolean
   source: string
   rules_version: string

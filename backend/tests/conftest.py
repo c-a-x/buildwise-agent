@@ -5,6 +5,8 @@ import os
 # 测试固定使用离线 mock 视觉，与开发者本地 .env 解耦（本地可能设为 safety_hybrid）
 os.environ.setdefault("VISION_PROVIDER", "mock")
 os.environ.setdefault("VISION_LLM_PROVIDER", "off")
+# 文本生成同样固定离线（本地可能设为 openai_compatible/DeepSeek，测试不应发起外部 LLM 请求）
+os.environ.setdefault("TEXT_PROVIDER", "template")
 # 关闭定时关怀调度，避免 TestClient 触发 lifespan 时在测试内启动后台调度器
 os.environ.setdefault("CARE_SCHEDULE_ENABLED", "false")
 

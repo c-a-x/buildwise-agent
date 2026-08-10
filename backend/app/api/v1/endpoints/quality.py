@@ -1,19 +1,21 @@
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import ensure_project_access, get_current_user
+from app.api.dependencies import ensure_project_access, require_roles
 from app.api.response import ok
 from app.db.session import get_db
 from app.models import User
 from app.services.quality_service import QualityService
 from app.services.project_service import ProjectService
 
+_QUALITY_ROLES = ("admin", "project_manager", "quality_inspector")
+
 
 router = APIRouter(prefix="/quality", tags=["质量巡检"])
 
 
 @router.get("/status")
-def status(http_request: Request, user: User = Depends(get_current_user)):
+def status(http_request: Request, user: User = Depends(require_roles(*_QUALITY_ROLES))):
     return ok({"key": "quality", "name": "工程质量巡检", "agent_name": "QualityAgent", "status": "available", "description": "质量缺陷识别（裂缝/渗漏/剥落/锈蚀/鼓包）五 Agent 闭环。", "planned_inputs": ["巡检图片", "位置", "作业类型"], "planned_outputs": ["缺陷清单", "质量整改工单草稿", "日报预览"], "available_endpoints": ["POST /api/v1/quality/analyze", "GET /api/v1/quality/tasks"]}, http_request)
 
 
@@ -26,7 +28,7 @@ async def analyze(
     work_type: str = Form(...),
     description: str = Form(""),
     demo_scenario: str | None = Form(None),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(*_QUALITY_ROLES)),
     db: Session = Depends(get_db),
 ):
     ensure_project_access(project_id, user, db)
@@ -36,7 +38,7 @@ async def analyze(
 
 
 @router.get("/tasks")
-def list_tasks(http_request: Request, project_id: str | None = Query(None), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def list_tasks(http_request: Request, project_id: str | None = Query(None), user: User = Depends(require_roles(*_QUALITY_ROLES)), db: Session = Depends(get_db)):
     if project_id:
         ensure_project_access(project_id, user, db)
         return ok(QualityService(db).list_tasks(project_id), http_request)
@@ -49,7 +51,7 @@ def list_tasks(http_request: Request, project_id: str | None = Query(None), user
 
 
 @router.get("/tasks/{task_id}")
-def get_task(task_id: str, http_request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_task(task_id: str, http_request: Request, user: User = Depends(require_roles(*_QUALITY_ROLES)), db: Session = Depends(get_db)):
     data = QualityService(db).get_task(task_id)
     ensure_project_access(data.project_id, user, db)
     return ok(data.model_dump(mode="json"), http_request)

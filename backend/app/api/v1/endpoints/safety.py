@@ -10,9 +10,10 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPExcepti
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import ensure_project_access, get_current_user, get_current_user_query_token
+from app.api.dependencies import ensure_project_access, get_current_user_query_token, require_roles
 from app.api.response import ok
 from app.core.config import settings
+from app.core.exceptions import ForbiddenError
 from app.db.session import get_db
 from app.models import User
 from app.providers.vision.mapping import compute_risk_level
@@ -27,13 +28,16 @@ from app.utils.ids import new_id
 
 router = APIRouter(prefix="/safety", tags=["安全分析"])
 
+_SAFETY_ROLES = ("admin", "project_manager", "safety_officer")
+_SAFETY_VIEW_ROLES = ("admin", "project_manager", "safety_officer", "quality_inspector")
+
 
 @router.post("/detect-frame")
 def detect_frame(
     http_request: Request,
     image: UploadFile = File(...),
     background_tasks: BackgroundTasks = BackgroundTasks(),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(*_SAFETY_ROLES)),
 ):
     """实时单帧检测：只跑 YOLO，不落库、不建工单、不跑 LLM。
 
@@ -102,7 +106,7 @@ def detect_frame(
 
 
 @router.post("/broadcast-test")
-def broadcast_test(http_request: Request, user: User = Depends(get_current_user)):
+def broadcast_test(http_request: Request, user: User = Depends(require_roles(*_SAFETY_ROLES))):
     """手动触发一次语音广播测试，返回送达与 TTS 状态，用于接线验证。"""
     result = send_test_broadcast(settings)
     if result["delivered"]:
@@ -154,6 +158,8 @@ def mjpeg_proxy(
     """
     if not _is_allowed_proxy_url(url):
         raise HTTPException(status_code=400, detail="仅支持本机/内网的 http(s) 视频流地址")
+    if user.role not in _SAFETY_ROLES:
+        raise ForbiddenError("仅安全员/项目经理可查看视频流")
 
     def stream() -> Iterator[bytes]:
         try:
@@ -181,7 +187,7 @@ async def analyze(
     work_type: str = Form(...),
     description: str = Form(""),
     demo_scenario: str | None = Form(None),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(*_SAFETY_ROLES)),
     db: Session = Depends(get_db),
 ):
     ensure_project_access(project_id, user, db)
@@ -191,7 +197,7 @@ async def analyze(
 
 
 @router.get("/tasks")
-def list_tasks(http_request: Request, project_id: str | None = Query(None), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def list_tasks(http_request: Request, project_id: str | None = Query(None), user: User = Depends(require_roles(*_SAFETY_VIEW_ROLES)), db: Session = Depends(get_db)):
     if project_id:
         ensure_project_access(project_id, user, db)
     else:
@@ -206,7 +212,7 @@ def list_tasks(http_request: Request, project_id: str | None = Query(None), user
 
 
 @router.get("/tasks/{task_id}")
-def get_task(task_id: str, http_request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def get_task(task_id: str, http_request: Request, user: User = Depends(require_roles(*_SAFETY_VIEW_ROLES)), db: Session = Depends(get_db)):
     data = SafetyService(db).get_task(task_id)
     ensure_project_access(data.project_id, user, db)
     return ok(data.model_dump(mode="json"), http_request)

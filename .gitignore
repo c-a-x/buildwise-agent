@@ -19,6 +19,9 @@ backend/storage/reports/*
 !backend/storage/reports/.gitkeep
 backend/storage/logs/*
 !backend/storage/logs/.gitkeep
+backend/storage/models/*
+!backend/storage/models/
+!backend/storage/models/*.pt
 backend/*.db
 *.sqlite3
 

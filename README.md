@@ -212,11 +212,39 @@ VISION_LLM_PROVIDER=off          # claude_cli | doubao | zhipu | off
 - **降级规则**：质量模型缺失或加载失败时回退 `quality_mock` 并标记 `is_simulated=true`；模型就绪后 `provider_info.vision` 显示 `quality_hybrid:yolo`（可选叠加质量 LLM，配置方式同安全侧）；
 - **相机拍照**：安全分析与质量巡检页面均支持本机摄像头直接拍照——`getUserMedia` 打开预览（复用实时监控页的设备选择模式），拍摄单帧转成 JPEG 图片后走同一个 analyze 闭环；画面仅在本浏览器内处理、不额外存储；无摄像头或权限被拒时仍可上传/使用示例图，不报错降级。
 
-## 绿色建造 · 碳排核算（green 模块）
+## 绿色建造（green 模块）
 
-「绿色建造」页（`/green`）提供施工阶段碳排核算核心：按 GB/T 51366-2019《建筑碳排放计算标准》因子法 `排放 = 活动数据 × 排放因子`，把材料、运输、能耗三类活动数据折算为 A1-A3（建材生产）/ A4（建材运输）/ A5（施工过程）分阶段碳排放，并给出面积强度、主要贡献项、减排建议与报告预览。
+「绿色建造」页（`/green`）分四个标签页：碳排核算、四节一环保评估、环保监测台账、碳排趋势与目标，并带 AI 优化建议。均为表单输入的计算闭环，不走图像/五 Agent 流程。
+
+### 碳排核算
+
+按 GB/T 51366-2019《建筑碳排放计算标准》因子法 `排放 = 活动数据 × 排放因子`，把材料、运输、能耗三类活动数据折算为 A1-A3（建材生产）/ A4（建材运输）/ A5（施工过程）分阶段碳排放，并给出面积强度、主要贡献项、减排建议与报告预览；表单旁有「填入示例清单」按钮，一键填入已验证命中因子库的清单。
 
 - **因子库**：`data_demo/green/factors.json`，每条因子带 `code/name/unit/factor/factor_unit/source/year/verified/note`。`verified=true` 表示有公开权威来源可直接采用（如生态环境部《2022年度全国电网平均二氧化碳排放因子》0.5703 tCO2/MWh）；`verified=false` 为演示推算值（如 GB/T 51366-2019 附录 D/E 应用实例推算的 C30混凝土≈0.295 tCO2e/m³、热轧钢筋≈2.34 tCO2e/t），前端标「待核证」徽标、结果 `is_simulated=true`，正式核算需替换为经核证的因子数据；修改文件后重启后端生效；
+- **真实公开数据参考**：`data_demo/green/reference.json` 收录中国建筑股份有限公司公开披露的真实数据（《2024年度环境社会治理可持续发展报告》与《2024年年度报告》，2025-04 发布，可在巨潮资讯/公司官网核验），按 `carbon/energy/green/environment/scale` 分组展示：万元产值碳排放强度同比变化与 2027 目标、范围三排放占比、能源消耗总量、绿色建筑认证与绿色示范工地数量、环保投入、新签合同额/房屋建筑施工面积/营业收入等；每条带 `value/unit/year/source/note` 来源引用，前端「真实公开数据参考 · 中国建筑」卡独立展示，**不参与本项目面积强度 z-score 排名**；修改文件后重启后端生效；
+
+### 四节一环保评估
+
+按节材、节水、节能、节地、环境保护五个维度录入指标（每维 20% 权重），量化评估绿色施工水平，输出总分、等级（优秀/优良/合格/不合格）、分维度得分与 Word 评估报告下载；未填指标按 0 计并标记为演示结果。表单旁有「填入示例数据」按钮。
+
+### 环保监测台账
+
+记录扬尘（PM2.5/PM10/TSP）、噪声（昼/夜）、污水（COD/SS/pH）与固废日常监测读数，按控制限值（GB 12523 等，`GET /env-records/thresholds`）自动标红超标项并支持「仅看超标」筛选；同一天重复提交幂等覆盖原记录。表单旁有「填入示例数据」按钮。
+
+### 碳排趋势与目标
+
+把历次核算画成面积强度曲线，可设定强度目标（tCO2e/m²）并绘制参考线，按 达标（≤目标）/ 临界（≤ 目标 1.1 倍）/ 超标 判定当前状态；项目 ≥2 个时另展示「同类项目对标」z-score 排名（口径详见「统计分析」节）。
+
+### AI 优化建议
+
+基于最新碳排核算或四节一环保评估结果生成 3~6 条可执行绿色施工行动建议。`TEXT_PROVIDER=openai_compatible` 且配置 `LLM_BASE_URL`/`LLM_API_KEY`/`LLM_MODEL` 时调用大模型（DeepSeek 等兼容 OpenAI 协议服务）；未配置或调用失败时降级为本地静态建议并标记 `is_simulated=true`，不阻断（配置方式见「Provider 切换」节）。
+
+### 示例数据
+
+`backend/app/db/seed_green.py` 随 `python -m app.db.seed` 自动播种，逐实体幂等（已有数据则跳过）：PRJ-001 碳排核算 ×3（面积 8500，强度递减 0.090→0.075→0.063）、四节一环保评估 ×2（优良/优秀）、环保监测台账 ×4（含 2 条超标：PM2.5/TSP 超标、夜间噪声超标）、碳排强度目标 0.08；另给中国尊（PRJ-002）与平安金融中心（PRJ-003）各补 1 条核算供跨项目对标。各表单页的「填入示例数据 / 示例清单 / 示例目标」按钮在未播种时也可快速手动演示。
+
+### 配置与接口
+
 - **配置**（`backend/.env`）：
   ```env
   GREEN_FACTORS_PATH=../data_demo/green/factors.json
@@ -225,15 +253,26 @@ VISION_LLM_PROVIDER=off          # claude_cli | doubao | zhipu | off
 - **接口**：
   | 接口 | 说明 |
   | --- | --- |
-  | `POST /api/v1/green/analyze` | JSON 提交 `project_id/area_m2/scope/materials/transport/energy` → 分阶段排放 + 强度 + 建议 + 报告预览 |
+  | `POST /api/v1/green/analyze` | 碳排核算：提交 `project_id/area_m2/scope/materials/transport/energy` → 分阶段排放 + 强度 + 建议 + 报告预览 |
   | `GET /api/v1/green/analyses` | 碳排核算历史（可按 `project_id` 过滤） |
   | `GET /api/v1/green/analyses/{id}` | 核算详情 |
   | `GET /api/v1/green/analyses/{id}/report` | 下载核算 Word 报告（`.docx`，python-docx 生成，缺失时降级为 `.txt`） |
   | `GET /api/v1/green/benchmark` | 同类项目碳排强度 z-score 对标（可按 `project_id` 高亮当前项目） |
   | `GET /api/v1/green/factors` | 排放因子库（含 verified 标记） |
   | `GET /api/v1/green/reference` | 真实公开数据参考库（中国建筑 2024 年度 ESG/年报披露，来源可核验，独立于 z-score 对标） |
-- **真实公开数据参考**：`data_demo/green/reference.json` 收录中国建筑股份有限公司公开披露的真实数据（《2024年度环境社会治理可持续发展报告》与《2024年年度报告》，2025-04 发布，可在巨潮资讯/公司官网核验），按 `carbon/energy/green/environment/scale` 分组展示：万元产值碳排放强度同比变化与 2027 目标、范围三排放占比、能源消耗总量、绿色建筑认证与绿色示范工地数量、环保投入、新签合同额/房屋建筑施工面积/营业收入等；每条带 `value/unit/year/source/note` 来源引用，前端「真实公开数据参考 · 中国建筑」卡独立展示，**不参与本项目面积强度 z-score 排名**；修改文件后重启后端生效；
-- **与 safety/quality 的差异**：绿色为表单输入的计算核心，不走图像/五 Agent 闭环（绿色检测闭环规划中）；复用 `carbon_analyses` 表（`requested_by/area_m2/scope/is_simulated/report_preview/factor_version`），条目与分阶段明细存 `result_json`；未命中因子的条目按 0 计并给出警告，不中断请求；
+  | `POST /api/v1/green/assessments` | 四节一环保评估：提交五维指标 → 总分 + 等级 + 分维度得分 |
+  | `GET /api/v1/green/assessments` | 评估历史（可按 `project_id` 过滤） |
+  | `GET /api/v1/green/assessments/{id}` | 评估详情 |
+  | `GET /api/v1/green/assessments/{id}/report` | 下载评估 Word 报告 |
+  | `POST /api/v1/green/env-records` | 环保台账记录（同日幂等覆盖，超标项自动告警） |
+  | `GET /api/v1/green/env-records` | 台账列表（可按 `project_id/start_date/end_date/alert_only` 过滤） |
+  | `GET /api/v1/green/env-records/{id}` | 台账详情 |
+  | `GET /api/v1/green/env-records/thresholds` | 控制限值（GB 12523 等） |
+  | `GET /api/v1/green/trend` | 面积强度趋势（按 `project_id`） |
+  | `GET /api/v1/green/target` | 强度目标 |
+  | `PUT /api/v1/green/target` | 设定/更新强度目标 |
+  | `POST /api/v1/green/advice` | 生成 AI 优化建议（`source_type` 为 `carbon`/`assessment`） |
+- **与 safety/quality 的差异**：绿色为表单输入的计算核心，不走图像/五 Agent 闭环（绿色检测闭环规划中）；复用 `carbon_analyses` 表（`requested_by/area_m2/scope/is_simulated/report_preview/factor_version`），条目与分阶段明细存 `result_json`；评估/台账/目标分别落 `green_assessments`/`green_env_records`/`green_targets`；未命中因子的条目按 0 计并给出警告，不中断请求；
 - **降级规则**：因子库缺失或解析失败时返回空库并提示 `GREEN_FACTORS_PATH` 配置，所有条目按因子缺失处理。
 
 ## 工友关怀（care 模块）

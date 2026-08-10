@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import TypeAlias
 
 from fastapi import Request
 from sqlalchemy.orm import Session
 
 from app.models import AuditLog, User
 from app.utils.ids import new_id
+
+
+JsonPrimitive: TypeAlias = str | int | float | bool | None
+JsonValue: TypeAlias = JsonPrimitive | list["JsonValue"] | dict[str, "JsonValue"]
+JsonObject: TypeAlias = dict[str, JsonValue]
+AuditRecord: TypeAlias = dict[str, JsonValue]
 
 
 def record_audit(
@@ -17,10 +23,11 @@ def record_audit(
     action: str,
     resource_type: str,
     resource_id: str | None = None,
-    detail_json: dict[str, Any] | None = None,
+    detail_json: JsonObject | None = None,
     ip_address: str | None = None,
+    commit: bool = True,
 ) -> AuditLog:
-    """写一条审计日志并提交（自包含持久化，调用方无需再 commit）。"""
+    """写一条审计日志；默认提交，事务型调用方可延迟提交。"""
     row = AuditLog(
         id=new_id("AUD"),
         user_id=user_id,
@@ -31,7 +38,8 @@ def record_audit(
         ip_address=ip_address,
     )
     db.add(row)
-    db.commit()
+    if commit:
+        db.commit()
     return row
 
 
@@ -56,7 +64,7 @@ class AuditService:
         end_at: datetime | None = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> tuple[list[dict[str, Any]], int]:
+    ) -> tuple[list[AuditRecord], int]:
         query = self.db.query(AuditLog)
         if user_id:
             query = query.filter(AuditLog.user_id == user_id)
@@ -77,7 +85,7 @@ class AuditService:
         rows = self.db.query(AuditLog.action).distinct().order_by(AuditLog.action).all()
         return [row[0] for row in rows]
 
-    def _serialize(self, row: AuditLog) -> dict[str, Any]:
+    def _serialize(self, row: AuditLog) -> AuditRecord:
         user = self.db.get(User, row.user_id)
         return {
             "id": row.id,

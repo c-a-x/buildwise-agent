@@ -42,7 +42,8 @@ async def app_error_handler(request: Request, exc: AppError):
 
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(request: Request, exc: RequestValidationError):
-    return JSONResponse(status_code=422, content={"success": False, "message": "参数校验失败", "error": {"code": "VALIDATION_ERROR", "details": exc.errors()}, "request_id": getattr(request.state, "request_id", new_id("REQ"))})
+    details = [{"loc": list(error.get("loc", ())), "msg": str(error.get("msg", "参数错误")), "type": error.get("type", "value_error")} for error in exc.errors()]
+    return JSONResponse(status_code=422, content={"success": False, "message": "参数校验失败", "error": {"code": "VALIDATION_ERROR", "details": details}, "request_id": getattr(request.state, "request_id", new_id("REQ"))})
 
 
 @app.exception_handler(Exception)

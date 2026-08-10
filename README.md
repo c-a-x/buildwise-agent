@@ -6,6 +6,8 @@ BuildWise 是面向施工现场的安全运营工作台，覆盖**安全分析�
 
 默认配置不需要外部 API Key，数据库使用真实 SQLite 文件，适合离线演示和自动化验收。前端不会直接连接数据库，而是通过 FastAPI → SQLAlchemy → SQLite 读取和写入数据。规范检索默认使用本地关键词 Provider；Chroma 模式使用真实持久化向量 collection，但仍使用离线可重复 embedding，不依赖外部文本大模型。
 
+官方 `scripts/e2e_demo.py` 会有意写入演示 SQLite 库，依赖 seed 数据并支持重复运行，不提供隔离数据库。
+
 ## 环境要求
 
 - Python 3.11 或更高版本；
@@ -154,6 +156,8 @@ TEXT_PROVIDER=template
 - 未配置必需参数时接口返回明确的 `PROVIDER_NOT_CONFIGURED`，不会静默退回模拟结果。
 
 不要把真实 API Key 写入仓库、镜像或文档。真实模型的许可、网络、成本和生产密钥由部署方负责。
+
+运行状态页和 `GET /api/v1/health` 会把能力标记为 `available`（本地能力已就绪）、`configured`（配置或本地资源完整但尚未执行 smoke test）、`simulated`（离线模拟）、`not_configured`（缺少可选配置或索引）或 `unavailable`（依赖/资源不可用）。默认离线环境中，视觉 `mock` 和文本 `template` 是模拟能力，关键词检索是本地可用能力；真实 YOLO 权重、Chroma collection、外部 LLM、天气、ASR、TTS 和硬件广播需要单独安装、配置并通过 smoke test 验证，不会被静默伪装成已验证的真实结果。
 
 ## 十类视觉检测（safety_hybrid）
 
@@ -389,6 +393,15 @@ cd E:\cc项目\buildwise-agent
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test_runbooks.ps1
 ```
 
+推荐使用一条命令执行完整验收（后端测试、迁移检查、runbook、真实 HTTP E2E、Provider 预检、前端测试/类型检查/构建和 `git diff --check`）：
+
+```powershell
+cd E:\cc项目\buildwise-agent
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_all.ps1
+```
+
+其中 runbook 和 `scripts/e2e_demo.py` 会有意写入 `backend/storage/buildwise.db` 的持久演示数据，支持重复执行但不是隔离数据库；脚本不会启动或停止开发服务器。
+
 ## 演示账号
 
 | 账号 | 密码 | 角色 |
@@ -402,6 +415,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test_runbooks.ps1
 种子数据（`backend/app/db/seed.py`）除默认演示项目「滨江智造中心一期」（PRJ-001，按 `created_at` 倒序仍为默认当前项目）外，另加入 3 个中国建筑公开代表项目作为真实演示项目：**北京中信大厦（中国尊）**（528 米）、**深圳平安金融中心**（599.1 米）、**广州周大福金融中心（广州东塔）**（530 米）——名称与承建信息取自公开项目资料（来源记入项目 `description`），`created_at` 回填到竣工年份；四个演示角色对 4 个项目均可见、可切换做碳排核算与对标。
 
 ## 验证命令
+
+完整验收优先执行：
+
+```powershell
+cd E:\cc项目\buildwise-agent
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_all.ps1
+```
+
+需要单独定位阶段时，再执行下面的分项命令：
 
 ```powershell
 cd E:\cc项目\buildwise-agent\backend
@@ -449,7 +471,7 @@ npm run build
 - `frontend/`：Vue 3 + TypeScript + Pinia + Vue Router；
 - `backend/`：FastAPI + Pydantic + SQLAlchemy + Alembic + LangGraph；
 - `data_demo/`：规范数据、演示图片、示例日报和材料数据；
-- `scripts/`：本地启动、种子、知识导入、演示图片和 runbook 校验；
+- `scripts/`：本地启动、种子、知识导入、演示图片、runbook 和全量验收；
 - `docs/`：产品、架构、API、数据库、算法、部署和演示文档。
 
 ## 能力边界

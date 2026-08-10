@@ -18,6 +18,8 @@
 | POST | `/api/v1/auth/login` | 登录 |
 | POST | `/api/v1/auth/register` | 注册 |
 | GET | `/api/v1/auth/me` | 当前用户 |
+| PATCH | `/api/v1/users/me` | 更新当前用户的姓名、手机号；用户名、角色和激活状态不可修改 |
+| POST | `/api/v1/users/me/password` | 校验旧密码并修改当前用户密码 |
 | GET | `/api/v1/projects` | 项目列表 |
 | POST | `/api/v1/projects` | 创建项目 |
 | GET | `/api/v1/dashboard/summary` | 首页统计 |
@@ -52,7 +54,7 @@
 | GET | `/api/v1/stats/anomalies` | 隐患/缺陷历史 z-score 异常波动检测（safety/quality） |
 | GET | `/api/v1/health` | 健康检查，包含 Provider 与 SQLite 连接状态 |
 
-健康检查的 `data.database` 会由后端执行真实 `SELECT 1` 得出：
+健康检查的 `data.database` 会由后端执行真实 `SELECT 1` 得出；`data.capabilities` 是只读的 Provider/模块预检结果。每项包含 `key`、`name`、`provider`、`status`、`is_simulated`、`reason` 和 `next_step`。`status` 取值为：`available`（本地能力已就绪）、`configured`（配置或本地资源完整但尚未执行 smoke test）、`simulated`（离线模拟）、`not_configured`（缺少可选配置或索引）和 `unavailable`（依赖或资源不可用）。
 
 ```json
 {
@@ -60,6 +62,22 @@
   "dialect": "sqlite",
   "persistent": true
 }
+```
+
+用户资料与密码接口示例：
+
+```http
+PATCH /api/v1/users/me
+Content-Type: application/json
+
+{"real_name":"现场负责人","phone":"13800000000"}
+```
+
+```http
+POST /api/v1/users/me/password
+Content-Type: application/json
+
+{"current_password":"旧密码","new_password":"新密码至少8位","new_password_confirm":"新密码至少8位"}
 ```
 
 ## 图片分析

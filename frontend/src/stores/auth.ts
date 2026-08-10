@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 
 import { authApi } from '@/api/auth'
 import { getApiError } from '@/api/http'
-import type { LoginPayload, RegisterPayload, User } from '@/types/auth'
+import type { ChangePasswordPayload, ChangePasswordResponse, LoginPayload, ProfileUpdatePayload, RegisterPayload, User } from '@/types/auth'
 import { clearToken, getToken, setToken } from '@/utils/storage'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -45,12 +45,16 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function restoreSession(): Promise<boolean> {
     if (!token.value) return false
+    loading.value = true
+    error.value = ''
     try {
       user.value = await authApi.me()
       return true
     } catch {
       clearSession()
       return false
+    } finally {
+      loading.value = false
     }
   }
 
@@ -64,6 +68,32 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function updateProfile(payload: ProfileUpdatePayload): Promise<void> {
+    loading.value = true
+    error.value = ''
+    try {
+      user.value = await authApi.updateProfile(payload)
+    } catch (cause) {
+      error.value = getApiError(cause)
+      throw cause
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function changePassword(payload: ChangePasswordPayload): Promise<ChangePasswordResponse> {
+    loading.value = true
+    error.value = ''
+    try {
+      return await authApi.changePassword(payload)
+    } catch (cause) {
+      error.value = getApiError(cause)
+      throw cause
+    } finally {
+      loading.value = false
+    }
+  }
+
   function clearSession(): void {
     token.value = null
     user.value = null
@@ -72,5 +102,5 @@ export const useAuthStore = defineStore('auth', () => {
 
   window.addEventListener('buildwise:auth-expired', clearSession)
 
-  return { token, user, loading, error, isAuthenticated, login, register, restoreSession, logout, clearSession }
+  return { token, user, loading, error, isAuthenticated, login, register, restoreSession, logout, updateProfile, changePassword, clearSession }
 })

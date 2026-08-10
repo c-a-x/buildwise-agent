@@ -19,7 +19,7 @@ PROJECT_DIR = BACKEND_DIR.parent
 
 def _path_from_env(value: str, default: str) -> Path:
     candidate = Path(value or default)
-    return candidate if candidate.is_absolute() else BACKEND_DIR / candidate
+    return (candidate if candidate.is_absolute() else BACKEND_DIR / candidate).resolve()
 
 
 def _normalize_database_url(value: str) -> str:

@@ -30,3 +30,18 @@ export interface RegisterPayload {
   role: Exclude<Role, 'admin'>
   phone?: string
 }
+
+export interface ProfileUpdatePayload {
+  real_name?: string
+  phone?: string | null
+}
+
+export interface ChangePasswordPayload {
+  current_password: string
+  new_password: string
+  new_password_confirm: string
+}
+
+export interface ChangePasswordResponse {
+  changed: boolean
+}

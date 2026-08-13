@@ -26,7 +26,7 @@ const groups: NavigationGroup[] = [
 const visibleGroups = computed(() => groups.map((group) => ({ ...group, items: group.items.filter((item) => !item.roles || (auth.user && item.roles.includes(auth.user.role))) })).filter((group) => group.items.length))
 const isActive = (to: string): boolean => route.path === to || route.path.startsWith(`${to}/`)
 
-// 侧栏底部 Provider 状态：读取 /health 真实能力状态，而非硬编码"离线模拟"
+// 侧栏底部 Provider 状态：读取 /health 能力状态；模拟 Provider（mock 视觉 / template 文本）功能可用，视为「在线」，仅 not_configured / unavailable 才不计入
 const CORE_KEYS = new Set(['vision', 'retrieval', 'text'])
 const aiStatus = ref<{ label: string; detail: string; online: boolean }>({ label: '读取状态…', detail: '', online: false })
 
@@ -34,7 +34,7 @@ onMounted(async () => {
   try {
     const runtime = await systemApi.health()
     const core = (Object.values(runtime.capabilities ?? {}) as ProviderCapability[]).filter((capability) => capability && CORE_KEYS.has(capability.key))
-    const connected = core.filter((capability) => !capability.is_simulated && capability.status !== 'not_configured' && capability.status !== 'unavailable')
+    const connected = core.filter((capability) => capability.status !== 'not_configured' && capability.status !== 'unavailable')
     if (connected.length === 0) {
       aiStatus.value = { label: '离线模拟 Provider', detail: '无需外部 API Key', online: false }
     } else {

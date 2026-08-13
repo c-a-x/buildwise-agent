@@ -28,10 +28,26 @@ def _ingest_knowledge(db, json_path: Path) -> int:
             documents = []
     for item in documents:
         document_id = str(item.get("id", new_id("KNO")))
-        if not db.get(KnowledgeDocument, document_id):
-            metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
-            metadata = {**metadata, "hazard_types": item.get("hazard_types", metadata.get("hazard_types", [])), "keywords": item.get("keywords", metadata.get("keywords", [])), "document_id": document_id}
-            db.add(KnowledgeDocument(id=document_id, title=str(item.get("title", item.get("article", "条款"))), source=str(item.get("source", "项目管理制度")), version=str(item.get("version", "MVP")), article=str(item.get("article", "")), category=str(item.get("category", "施工管理")), effective_date=str(item.get("effective_date")) if item.get("effective_date") else None, content=str(item.get("content", "")), metadata_json=metadata, status="active"))
+        metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+        metadata = {**metadata, "hazard_types": item.get("hazard_types", metadata.get("hazard_types", [])), "keywords": item.get("keywords", metadata.get("keywords", [])), "document_id": document_id}
+        fields = dict(
+            title=str(item.get("title", item.get("article", "条款"))),
+            source=str(item.get("source", "项目管理制度")),
+            version=str(item.get("version", "MVP")),
+            article=str(item.get("article", "")),
+            category=str(item.get("category", "施工管理")),
+            effective_date=str(item.get("effective_date")) if item.get("effective_date") else None,
+            content=str(item.get("content", "")),
+            metadata_json=metadata,
+            status="active",
+        )
+        existing = db.get(KnowledgeDocument, document_id)
+        if existing:
+            # upsert：规范条文随 JSON 源更新（真实条款替换占位/杜撰内容）
+            for field, value in fields.items():
+                setattr(existing, field, value)
+        else:
+            db.add(KnowledgeDocument(id=document_id, **fields))
     return len(documents)
 
 
@@ -76,6 +92,9 @@ def seed_database() -> None:
             ("PRJ-002", "REAL-002", "北京中信大厦（中国尊）", "北京市朝阳区光华路 CBD", "中国建筑承建代表作：总高 528 米、总建筑面积约 43.7 万平方米，中信集团总部大楼，中建股份—中建三局联合体施工总承包，2018 年移交。来源：公开项目资料。", 2018),
             ("PRJ-003", "REAL-003", "深圳平安金融中心", "深圳市福田区", "中建一局（中国建筑旗下）施工总承包：最终高度 599.1 米，2016 年全面竣工。来源：公开项目资料。", 2016),
             ("PRJ-004", "REAL-004", "广州周大福金融中心（广州东塔）", "广州市天河区珠江新城", "中国建筑股份有限公司施工总承包（中建三局、中建四局联合承建）：总高 530 米，2014 年封顶。来源：公开项目资料。", 2014),
+            ("PRJ-005", "REAL-005", "上海中心大厦", "上海市浦东新区陆家嘴金融城", "上海建工集团股份有限公司施工总承包：总高 632 米、总建筑面积约 57.6 万平方米，中国第一高楼，2016 年竣工交付。来源：公开项目资料。", 2016),
+            ("PRJ-006", "REAL-006", "国家体育场（鸟巢）", "北京市朝阳区奥林匹克公园", "北京城建集团施工总承包：第 29 届夏季奥林匹克运动会主场馆，总建筑面积约 25.8 万平方米、可容纳约 9.1 万人，2008 年竣工。来源：公开项目资料。", 2008),
+            ("PRJ-007", "REAL-007", "港珠澳大桥", "东接香港、西接珠海和澳门", "世界最长的跨海大桥：全长 55 公里，主桥约 29.6 公里，2018 年 10 月正式通车，主体工程由多家单位联合建设。来源：公开项目资料。", 2018),
         ]
         for project_id, code, name, address, description, completed_year in real_projects:
             real = db.get(Project, project_id)

@@ -16,15 +16,29 @@ export function useAlarm() {
   const alarmHazards = ref<DetectFrameHazard[]>([])
   let highStreak = 0
   let normalStreak = 0
+  let lastSignature = '' // 最近一次播报的隐患签名，用于场景变化时重新播报
+
+  /** 可播报隐患的唯一名集合（排序后拼接），判断当前帧与上次播报内容是否一致。 */
+  function signatureOf(hazards: DetectFrameHazard[]): string {
+    const names = hazards
+      .filter(isAnnounceableHazard)
+      .map((hazard) => hazard.hazard_name?.trim() ?? '')
+      .filter(Boolean)
+    return [...new Set(names)].sort().join('|')
+  }
 
   function evaluate(hazards: DetectFrameHazard[]): void {
     if (!alarmEnabled.value) return
     if (hazards.some(isAnnounceableHazard)) {
       highStreak += 1
       normalStreak = 0
-      if (highStreak >= TRIGGER_STREAK && !active.value) {
+      const signature = signatureOf(hazards)
+      const isNewTrigger = !active.value
+      const isChanged = active.value && signature && signature !== lastSignature
+      if (highStreak >= TRIGGER_STREAK && (isNewTrigger || isChanged)) {
         active.value = true
         alarmHazards.value = hazards.filter(isAnnounceableHazard)
+        lastSignature = signature
         if (!muted.value) {
           startAlert()
           speakHazards(alarmHazards.value.map((hazard) => hazard.hazard_name))
@@ -36,6 +50,7 @@ export function useAlarm() {
       if (normalStreak >= CLEAR_STREAK && active.value) {
         active.value = false
         alarmHazards.value = []
+        lastSignature = ''
         stopAlert()
         stopBroadcast()
       }
@@ -47,6 +62,7 @@ export function useAlarm() {
     alarmHazards.value = []
     highStreak = 0
     normalStreak = 0
+    lastSignature = ''
     stopAlert()
     stopBroadcast()
   }

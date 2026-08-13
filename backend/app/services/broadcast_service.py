@@ -8,6 +8,7 @@ IP 广播的 HTTP 服务）发 fire-and-forget 通知，同时推送文字与（
 from __future__ import annotations
 
 import base64
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -18,6 +19,12 @@ from app.core.exceptions import AppError
 from app.providers.factory import build_tts_provider
 
 _MAX_NAMES = 3  # 播报文案最多取前 3 个隐患名，避免过长
+
+# 去重状态：实时检测以 1 帧/秒轮询，同一批隐患会反复命中；按签名 + 冷却时间去重，
+# 仅在隐患集合变化或距上次播报超过 _REANNOUNCE_INTERVAL_S 时重新推送，避免持续轰炸音响。
+_LAST_KEY = ""
+_LAST_AT = 0.0
+_REANNOUNCE_INTERVAL_S = 60
 
 
 def build_broadcast_message(hazards: list[dict[str, Any]]) -> str:
@@ -81,14 +88,38 @@ def _dispatch(payload: dict[str, Any], webhook_url: str) -> bool:
         return False
 
 
+def _hazard_signature(hazards: list[dict[str, Any]]) -> str:
+    """可播报隐患名的排序去重签名，用于判断是否为同一批隐患。"""
+    names = sorted(
+        {
+            str(item.get("hazard_name", "")).strip()
+            for item in hazards
+            if str(item.get("hazard_name", "")).strip()
+        }
+    )
+    return "|".join(names)
+
+
 def broadcast_voice_alert(hazards: list[dict[str, Any]], settings: Settings) -> None:
-    """向网络音响/PA webhook 上报当前高危隐患（文字 + 可选音频）。失败静默。"""
+    """向网络音响/PA webhook 上报当前高危隐患（文字 + 可选音频）。失败静默。
+
+    实时检测 1 帧/秒，同一批隐患会在连续多帧反复命中；此处按隐患签名 + 冷却时间
+    去重，仅在隐患集合变化或距上次播报超过 _REANNOUNCE_INTERVAL_S 时重新推送。
+    """
+    global _LAST_KEY, _LAST_AT
     if not settings.broadcast_webhook_url:
         return
+    signature = _hazard_signature(hazards)
+    if signature:
+        now = time.monotonic()
+        if signature == _LAST_KEY and now - _LAST_AT < _REANNOUNCE_INTERVAL_S:
+            return  # 同批隐患且在冷却窗口内，不重复播报
     payload = _build_payload(hazards, settings)
     if not payload["message"]:
         return
-    _dispatch(payload, settings.broadcast_webhook_url)
+    if _dispatch(payload, settings.broadcast_webhook_url):
+        _LAST_KEY = signature
+        _LAST_AT = time.monotonic()
 
 
 def broadcast_text_alert(message: str, settings: Settings) -> None:

@@ -77,6 +77,18 @@ describe('ttsBroadcast', () => {
     expect(speakMock).toHaveBeenCalledTimes(2)
   })
 
+  it('同帧同名隐患去重后播报', () => {
+    speakHazards(['未佩戴安全帽', '未佩戴安全帽', '未佩戴安全帽'])
+    const utterance = MockUtterance.instances[0]!
+    expect(utterance.text).toBe('未佩戴安全帽')
+  })
+
+  it('超过 3 类隐患时概括为「检测到 N 项隐患：…等」', () => {
+    speakHazards(['未佩戴安全帽', '未佩戴口罩', '未穿反光衣', '堆料超高', '临边防护缺失'])
+    const utterance = MockUtterance.instances[0]!
+    expect(utterance.text).toBe('检测到 5 项隐患：未佩戴安全帽、未佩戴口罩、未穿反光衣 等')
+  })
+
   it('空数组或全空串不播报', () => {
     speakHazards([])
     speakHazards(['', '  '])

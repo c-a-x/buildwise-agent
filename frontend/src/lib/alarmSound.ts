@@ -11,7 +11,7 @@ function ensureAudio(): AudioContext | null {
     if (!Ctor) return null
     audioContext = new Ctor()
   }
-  if (audioContext.state === 'suspended') void audioContext.resume()
+  if (audioContext.state === 'suspended') void audioContext.resume().catch(() => {})
   return audioContext
 }
 

@@ -187,3 +187,55 @@ class TestDetectFrameIntegration:
     def test_broadcast_test_endpoint_requires_auth(self, client):
         response = client.post("/api/v1/safety/broadcast-test")
         assert response.status_code == 401
+
+
+class TestBroadcastDeduplication:
+    """broadcast_voice_alert 去重：同一批隐患不随 1 帧/秒轮询重复轰炸音响。"""
+
+    def _settings(self) -> Any:
+        return dataclasses.replace(settings, broadcast_webhook_url="http://speaker/api/tts", tts_provider="off")
+
+    def test_same_hazards_suppressed_within_cooldown(self, monkeypatch):
+        dispatched: list[dict[str, Any]] = []
+        monkeypatch.setattr(
+            "app.services.broadcast_service._dispatch",
+            lambda payload, url: dispatched.append(payload) or True,
+        )
+        monkeypatch.setattr("app.services.broadcast_service._LAST_KEY", "")
+        monkeypatch.setattr("app.services.broadcast_service._LAST_AT", 0.0)
+        s = self._settings()
+        broadcast_voice_alert([_hazard("未佩戴安全帽")], s)
+        broadcast_voice_alert([_hazard("未佩戴安全帽")], s)  # 同签名：冷却窗口内不重复
+        broadcast_voice_alert([_hazard("未佩戴安全帽"), _hazard("未佩戴口罩", hazard_type="no_mask")], s)
+        assert len(dispatched) == 2  # 第 1 次 + 隐患集合变化的第 3 次
+
+    def test_reaannounce_same_hazards_after_cooldown(self, monkeypatch):
+        dispatched: list[dict[str, Any]] = []
+        monkeypatch.setattr(
+            "app.services.broadcast_service._dispatch",
+            lambda payload, url: dispatched.append(payload) or True,
+        )
+        monkeypatch.setattr("app.services.broadcast_service._LAST_KEY", "")
+        monkeypatch.setattr("app.services.broadcast_service._LAST_AT", 0.0)
+        s = self._settings()
+        broadcast_voice_alert([_hazard("未佩戴安全帽")], s)
+        # 模拟冷却时间已过（回到 0），同一批隐患应重新播报
+        monkeypatch.setattr("app.services.broadcast_service._LAST_AT", 0.0)
+        broadcast_voice_alert([_hazard("未佩戴安全帽")], s)
+        assert len(dispatched) == 2
+
+    def test_failed_dispatch_not_remembered(self, monkeypatch):
+        import app.services.broadcast_service as bsvc
+
+        dispatched: list[dict[str, Any]] = []
+        monkeypatch.setattr(
+            "app.services.broadcast_service._dispatch",
+            lambda payload, url: dispatched.append(payload) or False,  # 总是失败
+        )
+        monkeypatch.setattr("app.services.broadcast_service._LAST_KEY", "")
+        monkeypatch.setattr("app.services.broadcast_service._LAST_AT", 0.0)
+        s = self._settings()
+        broadcast_voice_alert([_hazard("未佩戴安全帽")], s)
+        broadcast_voice_alert([_hazard("未佩戴安全帽")], s)  # 失败未记忆 → 同签名仍应重试
+        assert len(dispatched) == 2
+        assert bsvc._LAST_KEY == ""

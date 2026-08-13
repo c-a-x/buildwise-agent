@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /** 实时监控：视频源 → 逐帧 YOLO 检测画框 → 高危隐患软报警。 */
 
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 
 import { getApiError } from '@/api/http'
 import { safetyApi } from '@/api/safety'
@@ -12,6 +12,7 @@ import AlarmBanner from '@/components/safety/AlarmBanner.vue'
 import RealtimeSourcePicker from '@/components/safety/RealtimeSourcePicker.vue'
 import { useAlarm } from '@/composables/useAlarm'
 import { useRealtimeDetection } from '@/composables/useRealtimeDetection'
+import { ensureAlertAudio } from '@/lib/alarmSound'
 import { unlockTts } from '@/lib/ttsBroadcast'
 import { useAppStore } from '@/stores/app'
 import { riskLabel } from '@/utils/risk'
@@ -41,10 +42,30 @@ const providerLabel = computed(() => {
   return provider.replace(/^safety_hybrid:?/, '').toUpperCase() || 'YOLO'
 })
 
-onMounted(() => start())
+onMounted(() => {
+  start()
+  // 浏览器自动播放策略：AudioContext/TTS 需在用户手势内解锁，否则自动触发的报警蜂鸣静音。
+  // 首次任意点击/按键预热一次，后续报警即可正常出声。
+  window.addEventListener('pointerdown', primeAudioOnce)
+  window.addEventListener('keydown', primeAudioOnce)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('pointerdown', primeAudioOnce)
+  window.removeEventListener('keydown', primeAudioOnce)
+})
+
+/** 用户手势内预热音频与语音合成（只预热一次）。 */
+function primeAudioOnce(): void {
+  ensureAlertAudio()
+  unlockTts()
+  window.removeEventListener('pointerdown', primeAudioOnce)
+  window.removeEventListener('keydown', primeAudioOnce)
+}
 
 function toggleRunning(): void {
   unlockTts() // 用户手势内预热语音合成，避免后续报警播报被浏览器拦截
+  ensureAlertAudio() // 一并解锁蜂鸣音 AudioContext
   if (running.value) stop()
   else start()
 }
@@ -117,7 +138,7 @@ function onSourceChange(): void {
 
         <div class="side-note">
           <AppIcon name="info" :size="15" />
-          <span><b>软报警触发规则：</b>连续 2 帧出现高危（高风险/重大风险）或未戴安全帽、未戴口罩、未穿反光衣违规即报警；连续 3 帧正常自动解除。</span>
+          <span><b>软报警触发规则：</b>高危（高风险/重大风险）或未戴安全帽、未戴口罩、未穿反光衣违规即触发报警，恢复正常后自动解除。</span>
         </div>
       </aside>
     </div>

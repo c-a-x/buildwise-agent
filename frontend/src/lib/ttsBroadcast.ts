@@ -36,12 +36,17 @@ export function unlockTts(): void {
   }
 }
 
-/** 播报隐患名：多隐患用中文逗号连接成一句，取 zh 语音。 */
+const MAX_SPOKEN_NAMES = 3 // 同帧同名隐患去重后最多口播几个，避免长句卡顿
+
+/** 播报隐患名：按唯一名去重，≤3 类直接连接，更多则概括为「检测到 N 项隐患：a、b、c 等」。 */
 export function speakHazards(names: string[]): void {
   if (!ttsSupported()) return
-  const clean = names.map((name) => name?.trim()).filter(Boolean)
-  if (!clean.length) return
-  const text = clean.join('，')
+  const unique = [...new Set(names.map((name) => name?.trim()).filter(Boolean))]
+  if (!unique.length) return
+  const text =
+    unique.length <= MAX_SPOKEN_NAMES
+      ? unique.join('，')
+      : `检测到 ${unique.length} 项隐患：${unique.slice(0, MAX_SPOKEN_NAMES).join('、')} 等`
   const now = Date.now()
   if (text === lastText && now - lastSpokenAt < MIN_REPEAT_GAP_MS) return
   lastText = text

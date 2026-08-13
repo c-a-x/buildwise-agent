@@ -57,6 +57,30 @@ describe('useAlarm', () => {
     expect(mocks.speakHazards).not.toHaveBeenCalled()
   })
 
+  it('报警中隐患集合变化时重新播报（演示画面轮换场景）', () => {
+    const alarm = useAlarm()
+    alarm.evaluate([hazard()])
+    alarm.evaluate([hazard()])
+    expect(alarm.active.value).toBe(true)
+    mocks.speakHazards.mockClear()
+    // 画面轮换为另一组隐患：签名变化，即使已 active 也应重新播报
+    alarm.evaluate([hazard({ hazard_type: 'no_mask', hazard_name: '未佩戴口罩' })])
+    alarm.evaluate([hazard({ hazard_type: 'no_mask', hazard_name: '未佩戴口罩' })])
+    expect(alarm.active.value).toBe(true)
+    expect(mocks.speakHazards).toHaveBeenCalledTimes(1)
+    expect(mocks.speakHazards).toHaveBeenCalledWith(['未佩戴口罩'])
+  })
+
+  it('报警中隐患集合不变时不重复播报', () => {
+    const alarm = useAlarm()
+    alarm.evaluate([hazard()])
+    alarm.evaluate([hazard()])
+    mocks.speakHazards.mockClear()
+    alarm.evaluate([hazard()])
+    alarm.evaluate([hazard()])
+    expect(mocks.speakHazards).not.toHaveBeenCalled()
+  })
+
   it('连续 3 帧正常解除报警并停止播报', () => {
     const alarm = useAlarm()
     alarm.evaluate([hazard()])

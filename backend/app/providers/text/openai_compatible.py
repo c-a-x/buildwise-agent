@@ -21,6 +21,20 @@ class OpenAICompatibleTextProvider:
             data = json.loads(response.read().decode("utf-8"))
         return str(data["choices"][0]["message"]["content"])
 
+    def generate_chat_reply(self, payload: dict[str, object]) -> str:
+        question = str(payload.get("question", "")).strip()
+        context = payload.get("context", [])
+        context_lines = [str(item).strip() for item in context if str(item).strip()] if isinstance(context, list) else []
+        context_text = "\n".join(f"- {item}" for item in context_lines) or "暂无可直接引用的规范条款。"
+        prompt = (
+            "你是施工现场的工友助手，面向一线工友回答问题。"
+            "请用简洁、自然、容易执行的中文，先给结论，再给行动步骤。"
+            "优先依据提供的规范上下文，不要编造法规、数字或处罚；信息不足时明确提醒联系安全员确认。"
+            "回答控制在300字以内，不要解释你是模型。\n\n"
+            f"工友问题：{question}\n\n规范上下文：\n{context_text}"
+        )
+        return self._generate(prompt)
+
     def generate_worker_message(self, payload: dict[str, object]) -> str:
         return self._generate(f"请将以下施工安全要求转为不超过100字、尊重且明确的工友提醒：{payload}")
 

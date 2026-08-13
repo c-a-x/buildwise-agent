@@ -72,7 +72,7 @@ function onSourceChange(): void {
 
 <template>
   <div>
-    <AppPageHeader eyebrow="REALTIME SAFETY" title="实时监控" description="接入 ESP32-CAM / USB 摄像头 / 演示画面，逐帧进行 YOLO 隐患检测，高危违规自动触发软报警。">
+    <AppPageHeader eyebrow="REALTIME SAFETY" title="实时监控" description="接入 USB 摄像头 / 演示画面，逐帧进行 YOLO 隐患检测，高危违规自动触发软报警。">
       <template #actions>
         <button type="button" class="broadcast-toggle" title="向配置的网络音响/PA 推送测试播报" @click="testBroadcast"><AppIcon name="speaker" :size="14" />测试广播</button>
         <span class="status-pill" :class="lastResult?.available === false ? 'warning' : 'dark'"><span class="status-dot" :class="lastResult?.available === false ? '' : 'online'" />{{ providerLabel }}</span>

@@ -101,8 +101,15 @@ class Settings:
         os.getenv("WELLBEING_RULES_PATH", "../data_demo/wellbeing/rules.json"),
         "../data_demo/wellbeing/rules.json",
     )
+    hardware_telemetry_path: Path = _path_from_env(
+        os.getenv("HARDWARE_TELEMETRY_PATH", "storage/hardware/latest_telemetry.json"),
+        "storage/hardware/latest_telemetry.json",
+    )
+    hardware_fresh_seconds: int = int(os.getenv("HARDWARE_FRESH_SECONDS", "600"))
     weather_provider: str = os.getenv("WEATHER_PROVIDER", "off")  # off | openweather | qweather
     weather_api_base_url: str = os.getenv("WEATHER_API_BASE_URL", "https://api.openweathermap.org/data/2.5")
+    weather_geo_api_base_url: str = os.getenv("WEATHER_GEO_API_BASE_URL", "https://devapi.qweather.com/geo/v2")
+    weather_auth_type: str = os.getenv("WEATHER_AUTH_TYPE", "query")  # query | header | bearer
     weather_api_key: str = os.getenv("WEATHER_API_KEY", "")
     weather_city: str = os.getenv("WEATHER_CITY", "")
     care_schedule_enabled: bool = os.getenv("CARE_SCHEDULE_ENABLED", "false").lower() == "true"  # 定时关怀开关

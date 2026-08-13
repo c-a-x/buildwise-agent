@@ -350,3 +350,56 @@ def provider_capabilities(runtime_settings: Settings = settings) -> ProviderCapa
         "tts": _tts_capability(runtime_settings),
         "broadcast": _broadcast_capability(runtime_settings),
     }
+
+
+def _weather_capability(runtime_settings: Settings) -> ProviderCapability:
+    provider = runtime_settings.weather_provider
+    if provider == "off":
+        return _capability(
+            "weather",
+            "实时天气",
+            provider,
+            "not_configured",
+            False,
+            "天气 Provider 未配置，工友关怀仍支持手动输入。",
+            "配置 WEATHER_PROVIDER=openweather 或 qweather、WEATHER_API_KEY 和 WEATHER_CITY。",
+        )
+    if provider in {"openweather", "qweather"}:
+        missing = [
+            name
+            for name, value in (
+                ("WEATHER_API_KEY", runtime_settings.weather_api_key),
+                ("WEATHER_CITY", runtime_settings.weather_city),
+            )
+            if not value
+        ]
+        if missing:
+            label = "OpenWeather" if provider == "openweather" else "QWeather"
+            return _capability(
+                "weather",
+                "实时天气",
+                provider,
+                "not_configured",
+                False,
+                f"实时天气 {label} 缺少配置：{', '.join(missing)}。",
+                "补齐天气密钥与城市后运行真实天气 smoke test。",
+            )
+        label = "OpenWeather" if provider == "openweather" else "QWeather"
+        return _capability(
+            "weather",
+            "实时天气",
+            provider,
+            "configured",
+            False,
+            f"{label} 配置完整；健康检查不会请求外部天气接口。",
+            "运行真实天气 smoke test 验证网络和城市参数。",
+        )
+    return _capability(
+        "weather",
+        "实时天气",
+        provider,
+        "unavailable",
+        False,
+        f"不支持的天气 Provider：{provider}。",
+        "将 WEATHER_PROVIDER 改为 off、openweather 或 qweather。",
+    )

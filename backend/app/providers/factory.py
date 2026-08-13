@@ -121,5 +121,10 @@ def build_weather_provider(settings: Settings) -> WeatherProvider | None:
     if settings.weather_provider == "qweather":
         if not settings.weather_api_key:
             return None
-        return QWeatherProvider(settings.weather_api_base_url, settings.weather_api_key)
+        return QWeatherProvider(
+            settings.weather_geo_api_base_url,
+            settings.weather_api_base_url,
+            settings.weather_api_key,
+            settings.weather_auth_type,
+        )
     return None

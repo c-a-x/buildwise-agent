@@ -1,19 +1,12 @@
-import ipaddress
-import socket
 import time
-import urllib.parse
 import uuid
-from collections.abc import Iterator
 
-import httpx
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, Request, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, Query, Request, UploadFile
 from sqlalchemy.orm import Session
 
-from app.api.dependencies import ensure_project_access, get_current_user_query_token, require_roles
+from app.api.dependencies import ensure_project_access, require_roles
 from app.api.response import ok
 from app.core.config import settings
-from app.core.exceptions import ForbiddenError
 from app.db.session import get_db
 from app.models import User
 from app.providers.vision.mapping import compute_risk_level
@@ -112,70 +105,6 @@ def broadcast_test(http_request: Request, user: User = Depends(require_roles(*_S
     if result["delivered"]:
         return ok(result, http_request, "测试广播已送达")
     return ok(result, http_request, result["reason"] or "测试广播未送达")
-
-
-def _is_allowed_proxy_url(url: str) -> bool:
-    """只放行本机/内网的 http(s) 视频流地址，防止 SSRF 打到公网或内网探测。"""
-    if not url.startswith(("http://", "https://")):
-        return False
-    try:
-        parsed = urllib.parse.urlparse(url)
-    except ValueError:
-        return False
-    hostname = (parsed.hostname or "").strip().lower()
-    if not hostname:
-        return False
-    try:
-        ip = ipaddress.ip_address(hostname)
-    except ValueError:
-        ip = None
-    if ip is not None:
-        return ip.is_loopback or ip.is_private
-    if hostname in ("localhost", "localhost.localdomain"):
-        return True
-    try:
-        infos = socket.getaddrinfo(hostname, parsed.port or 80)
-    except OSError:
-        return False
-    return any(
-        ipaddress.ip_address(info[4][0]).is_loopback or ipaddress.ip_address(info[4][0]).is_private
-        for info in infos
-    )
-
-
-@router.get("/mjpeg-proxy")
-def mjpeg_proxy(
-    http_request: Request,
-    url: str = Query(...),
-    user: User = Depends(get_current_user_query_token),
-):
-    """透传 ESP32-CAM 的 MJPG 视频流并补上 CORS 头。
-
-    浏览器 `<img>` 直接加载 ESP32 MJPG 流可显示，但 canvas.toBlob 抓帧会因
-    缺 `Access-Control-Allow-Origin` 抛 SecurityError；本代理透传流并返回
-    `ACAO: *`，配合前端 `crossorigin="anonymous"` 才能抓帧检测。
-    token 走 query（`<img>` 标签带不了 Authorization header），仅本地演示场景。
-    """
-    if not _is_allowed_proxy_url(url):
-        raise HTTPException(status_code=400, detail="仅支持本机/内网的 http(s) 视频流地址")
-    if user.role not in _SAFETY_ROLES:
-        raise ForbiddenError("仅安全员/项目经理可查看视频流")
-
-    def stream() -> Iterator[bytes]:
-        try:
-            with httpx.stream("GET", url, timeout=httpx.Timeout(30.0, connect=5.0)) as upstream:
-                if upstream.status_code != 200:
-                    return
-                for chunk in upstream.iter_bytes(8192):
-                    yield chunk
-        except (httpx.HTTPError, OSError):
-            return
-
-    return StreamingResponse(
-        stream(),
-        media_type="multipart/x-mixed-replace",
-        headers={"Access-Control-Allow-Origin": "*", "Cache-Control": "no-cache"},
-    )
 
 
 @router.post("/analyze")

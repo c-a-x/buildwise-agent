@@ -156,10 +156,8 @@ class LLMHazardAnalyzer:
         """
         if self.provider == "claude_cli":
             ok, findings = self._claude_cli(image_path)
-        elif self.provider == "doubao":
-            ok, findings = self._doubao(image_path)
-        elif self.provider == "zhipu":
-            ok, findings = self._zhipu(image_path)
+        elif self.provider in {"doubao", "zhipu", "openai_compatible"}:
+            ok, findings = self._openai_compatible(image_path)
         else:
             return [], False
         if not ok:
@@ -240,14 +238,12 @@ class LLMHazardAnalyzer:
         except OSError:
             pass
 
-    def _openai_vision_call(
-        self, image_path: str, base_url: str, api_key: str, model: str
-    ) -> tuple[bool, list[dict[str, Any]]]:
-        """OpenAI 兼容视觉调用（豆包/智谱共用）：图片 base64 data URI + 双轮消息 + json 约束。
-
-        返回 (是否成功执行, 解析出的原始 finding 列表)。任何异常只降级不抛出。
-        """
-        base_url = (base_url or "").rstrip("/")
+    def _openai_compatible(self, image_path: str) -> tuple[bool, list[dict[str, Any]]]:
+        """OpenAI 兼容视觉调用（豆包/智谱共用）：图片 base64 data URI + json 约束。"""
+        settings = self.settings
+        base_url = (settings.vision_llm_base_url or settings.llm_base_url or "").rstrip("/")
+        api_key = settings.vision_llm_api_key or settings.llm_api_key
+        model = settings.vision_llm_model or settings.llm_model
         if not base_url or not api_key or not model:
             return False, []
         try:
@@ -289,18 +285,7 @@ class LLMHazardAnalyzer:
         return True, (findings or [])
 
     def _doubao(self, image_path: str) -> tuple[bool, list[dict[str, Any]]]:
-        """豆包（火山方舟）视觉调用：vision_llm_* 配置，兜底 LLM_*。"""
-        settings = self.settings
-        return self._openai_vision_call(
-            image_path, settings.vision_llm_base_url, settings.vision_llm_api_key, settings.vision_llm_model
-        )
-
-    def _zhipu(self, image_path: str) -> tuple[bool, list[dict[str, Any]]]:
-        """智谱（bigmodel）视觉调用：GLM-4V 支持图像识别，vision_llm_* 配置。"""
-        settings = self.settings
-        return self._openai_vision_call(
-            image_path, settings.vision_llm_base_url, settings.vision_llm_api_key, settings.vision_llm_model
-        )
+        return self._openai_compatible(image_path)
 
 
 # --------------------------------------------------------------------------

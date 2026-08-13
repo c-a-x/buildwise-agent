@@ -28,11 +28,18 @@ function sourceLabel(source: string): string {
 
 async function send(text = question.value): Promise<void> {
   const trimmed = text.trim()
-  if (!trimmed || !projectId.value || sending.value) return
+  if (!trimmed || sending.value) return
+  error.value = ''
+  if (!projectId.value) {
+    await projects.loadProjects()
+  }
+  if (!projectId.value) {
+    error.value = projects.error || '暂无可用项目，请先在“项目管理”中创建或选择项目后再提问。'
+    return
+  }
   question.value = ''
   messages.value.push({ mine: true, text: trimmed, time: new Date().toISOString() })
   sending.value = true
-  error.value = ''
   try {
     const response: WorkerMessage = await workerCareApi.chat(projectId.value, trimmed)
     messages.value.push({ mine: false, text: response.answer, time: response.created_at, source: sourceLabel(response.answer_source), citations: response.citations })

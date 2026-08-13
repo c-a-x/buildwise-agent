@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from fastapi import Depends, Request
+from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -23,25 +23,6 @@ def get_current_user(
         raise AppError("请先登录", "AUTH_TOKEN_EXPIRED", 401)
     try:
         payload = decode_access_token(credentials.credentials)
-    except ValueError as exc:
-        raise AppError("登录已失效，请重新登录", "AUTH_TOKEN_EXPIRED", 401) from exc
-    user = db.get(User, str(payload["sub"]))
-    if not user or not user.is_active:
-        raise AppError("用户不存在或已停用", "AUTH_TOKEN_EXPIRED", 401)
-    return user
-
-
-def get_current_user_query_token(request: Request, db: Session = Depends(get_db)) -> User:
-    """从 URL query 的 `token` 参数验证登录（`<img>` 标签无法带 Authorization header）。
-
-    仅用于 mjpeg-proxy 这类被浏览器原生标签消费的接口；业务接口一律走
-    `get_current_user`（Bearer header）。token 会出现在 URL 中，仅限本地演示场景。
-    """
-    token = request.query_params.get("token")
-    if not token:
-        raise AppError("请先登录", "AUTH_TOKEN_EXPIRED", 401)
-    try:
-        payload = decode_access_token(token)
     except ValueError as exc:
         raise AppError("登录已失效，请重新登录", "AUTH_TOKEN_EXPIRED", 401) from exc
     user = db.get(User, str(payload["sub"]))

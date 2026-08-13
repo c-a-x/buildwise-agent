@@ -63,6 +63,7 @@ const visionLlmHasStatus = computed(() => Boolean(visionLlmProvider.value) || vi
 const visionLlmProviderLabel = computed(() => {
   const provider = visionLlmProvider.value
   if (provider === 'doubao') return '豆包'
+  if (provider === 'zhipu') return '智谱 AI'
   if (provider === 'claude_cli') return 'Claude CLI'
   return provider || 'LLM'
 })

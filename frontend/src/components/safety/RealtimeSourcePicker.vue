@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/** 实时检测视频源：演示模式（循环示例图）/ 本机摄像头（getUserMedia）/ ESP32-CAM（MJPG 代理流）。 */
+/** 实时检测视频源：演示模式（循环示例图）/ 本机摄像头（getUserMedia）。 */
 
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { Ref } from 'vue'
@@ -9,10 +9,9 @@ import BoundingBoxOverlay from '@/components/safety/BoundingBoxOverlay.vue'
 import sampleSiteMixed from '@/assets/samples/sample_site_mixed.jpg'
 import sampleSiteNoHelmet from '@/assets/samples/sample_site_no_helmet.jpg'
 import sampleSiteNoMask from '@/assets/samples/sample_site_no_mask.jpg'
-import { useAuthStore } from '@/stores/auth'
 import type { DetectFrameHazard } from '@/types/safety'
 
-type SourceMode = 'demo' | 'camera' | 'esp32'
+type SourceMode = 'demo' | 'camera'
 
 const props = defineProps<{
   frameSource: Ref<HTMLImageElement | HTMLVideoElement | null>
@@ -22,11 +21,9 @@ const props = defineProps<{
   running: boolean
 }>()
 
-const auth = useAuthStore()
 const mode = ref<SourceMode>('demo')
 const cameraError = ref('')
 const cameraStream = ref<MediaStream | null>(null)
-const imageError = ref('')
 const videoEl = ref<HTMLVideoElement | null>(null)
 // 本机摄像头设备列表：getUserMedia 默认用系统"默认摄像头"（可能是 DroidCam 等虚拟设备），
 // 需 enumerateDevices + deviceId 显式选择电脑本体的 USB/内置摄像头。
@@ -37,10 +34,9 @@ const emit = defineEmits<{
   (e: 'source-change'): void
 }>()
 
-const modes: { key: SourceMode; label: string; icon: 'spark' | 'camera' | 'shield' }[] = [
+const modes: { key: SourceMode; label: string; icon: 'spark' | 'camera' }[] = [
   { key: 'demo', label: '演示模式', icon: 'spark' },
   { key: 'camera', label: '本机摄像头', icon: 'camera' },
-  { key: 'esp32', label: 'ESP32-CAM', icon: 'shield' },
 ]
 
 const samples = [
@@ -53,16 +49,6 @@ const demoIndex = ref(0)
 const currentSample = computed(() => samples[demoIndex.value % samples.length])
 const demoUrl = computed(() => currentSample.value?.url ?? '')
 const demoName = computed(() => currentSample.value?.name ?? '')
-
-const esp32Url = ref('http://192.168.1.100:81/stream')
-const proxiedUrl = computed(() => {
-  const trimmed = esp32Url.value.trim()
-  if (!trimmed) return ''
-  const base = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1').replace(/\/api\/v1\/?$/, '')
-  const params = new URLSearchParams({ url: trimmed, token: auth.token || '' })
-  // token 走 query 仅为本地演示工具可接受（<img> 无法带 Authorization 头）
-  return `${base}/api/v1/safety/mjpeg-proxy?${params.toString()}`
-})
 
 let demoTimer: number | null = null
 
@@ -131,7 +117,6 @@ function stopCamera(): void {
 }
 
 async function selectMode(next: SourceMode): Promise<void> {
-  imageError.value = ''
   if (next === mode.value) return
   stopCamera()
   mode.value = next
@@ -174,17 +159,14 @@ onUnmounted(() => {
     <div class="source-stage" :class="{ 'is-alarm': alarmActive }">
       <div class="stage-media">
         <img v-if="mode === 'demo'" :ref="bindSource" :src="demoUrl" crossorigin="anonymous" alt="演示现场画面" />
-        <video v-else-if="mode === 'camera'" :ref="bindVideoSource" autoplay playsinline muted alt="本机摄像头画面" />
-        <img v-else :ref="bindSource" :src="proxiedUrl" crossorigin="anonymous" alt="ESP32-CAM 实时画面" @error="() => (imageError = '无法连接摄像头，请检查 IP 与 MJPEG 固件')" @load="() => (imageError = '')" />
+        <video v-else :ref="bindVideoSource" autoplay playsinline muted alt="本机摄像头画面" />
         <BoundingBoxOverlay :hazards="props.hazards" />
         <div v-if="!running" class="stage-badge">已暂停</div>
         <div v-else-if="analyzing" class="stage-badge">检测中…</div>
       </div>
 
       <div v-if="mode === 'camera' && cameraError" class="stage-note error"><AppIcon name="info" :size="14" />{{ cameraError }}</div>
-      <div v-else-if="mode === 'esp32' && imageError" class="stage-note error"><AppIcon name="info" :size="14" />{{ imageError }}</div>
       <div v-else-if="mode === 'demo'" class="stage-note"><AppIcon name="spark" :size="14" />演示画面循环切换 · 当前：{{ demoName }}</div>
-      <div v-else-if="mode === 'esp32'" class="stage-note"><AppIcon name="shield" :size="14" />经后端代理接入 {{ esp32Url.trim() || '未填写地址' }}</div>
       <div v-else-if="mode === 'camera'" class="camera-field">
         <div class="stage-note"><AppIcon name="camera" :size="14" />本机摄像头画面仅在本浏览器内分析，不上传存储</div>
         <div v-if="cameraDevices.length > 1" class="camera-select">
@@ -196,10 +178,6 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <div v-if="mode === 'esp32'" class="esp32-field">
-        <input v-model.trim="esp32Url" type="url" spellcheck="false" placeholder="http://192.168.1.100:81/stream" aria-label="ESP32-CAM MJPG 流地址" />
-        <span class="mono">MJPG stream</span>
-      </div>
     </div>
   </div>
 </template>
@@ -228,7 +206,4 @@ onUnmounted(() => {
 .camera-select label { flex: none; color: var(--muted); font-size: 11px; font-weight: 700; }
 .camera-select select { flex: 1; min-width: 0; min-height: 44px; height: 44px; appearance: none; border: 1px solid var(--line); border-radius: 8px; padding: 0 42px 0 11px; color: var(--text); background-color: var(--surface); background-image: var(--select-chevron); background-position: right 12px center; background-repeat: no-repeat; background-size: 16px; font-size: 12px; }
 .camera-select select:focus { outline: none; border-color: var(--blue); }
-.esp32-field { display: flex; align-items: center; gap: 8px; }
-.esp32-field input { flex: 1; min-width: 0; min-height: 44px; height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 0 11px; color: var(--text); background: var(--surface); font-size: 12px; font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; }
-.esp32-field input:focus { outline: none; border-color: var(--blue); }
 </style>

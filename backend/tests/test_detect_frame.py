@@ -1,4 +1,4 @@
-"""实时单帧检测（/detect-frame）与 MJPG 代理（/mjpeg-proxy）端点测试。"""
+"""实时单帧检测（/detect-frame）端点测试。"""
 
 from __future__ import annotations
 
@@ -17,14 +17,6 @@ def _clean_tmp_frames():
         for path in tmp_dir.glob("frame-*"):
             path.unlink(missing_ok=True)
     yield
-
-
-def _token(client: object) -> str:
-    response = client.post(
-        "/api/v1/auth/login", json={"username": "safety", "password": "BuildWise123!"}
-    )
-    assert response.status_code == 200
-    return response.json()["data"]["access_token"]
 
 
 def _jpeg_bytes() -> bytes:
@@ -117,25 +109,3 @@ def test_detect_frame_rejects_invalid_and_too_large(client):
     )
     assert too_large.status_code == 413
 
-
-def test_mjpeg_proxy_requires_auth(client):
-    response = client.get("/api/v1/safety/mjpeg-proxy", params={"url": "http://192.168.1.50:81/stream"})
-    assert response.status_code == 401
-
-
-def test_mjpeg_proxy_denies_public_url(client):
-    response = client.get(
-        "/api/v1/safety/mjpeg-proxy",
-        params={"url": "https://example.com/stream", "token": _token(client)},
-    )
-    assert response.status_code == 400
-
-
-def test_mjpeg_proxy_passes_private_url_with_cors(client):
-    response = client.get(
-        "/api/v1/safety/mjpeg-proxy",
-        params={"url": "http://192.168.1.50:81/stream", "token": _token(client)},
-    )
-    # SSRF 守卫放行内网地址；连不上则返回 200 空流，但必须带 ACAO 头
-    assert response.status_code == 200
-    assert response.headers.get("access-control-allow-origin") == "*"

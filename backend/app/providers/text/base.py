@@ -4,6 +4,9 @@ from typing import Protocol
 
 
 class TextProvider(Protocol):
+    def generate_chat_reply(self, payload: dict[str, object]) -> str:
+        ...
+
     def generate_worker_message(self, payload: dict[str, object]) -> str:
         ...
 

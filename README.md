@@ -322,17 +322,16 @@ VISION_LLM_PROVIDER=off          # claude_cli | doubao | zhipu | off
 
 ## 实时安全监测与硬件接口
 
-「实时监控」页（`/safety/realtime`）把现场视频源逐帧送入后端 YOLO 检测，浏览器内叠加检测框，检测到高危违规时触发软报警；可选配 ESP32 硬报警（蜂鸣器）。
+「实时监控」页（`/safety/realtime`）把现场视频源逐帧送入后端 YOLO 检测，浏览器内叠加检测框，检测到高危违规时触发软报警；现场 ESP32 传感器数据在「工友关怀」页独立展示。
 
 **视频源（浏览器内切换）**：
 
 - **演示模式**：循环播放 `frontend/src/assets/samples/` 内置示例图，无摄像头也能演示检测与报警闭环；
-- **本机摄像头**：`getUserMedia` 读取 USB 摄像头，画面仅在本浏览器内分析，不上传存储；
-- **ESP32-CAM**：填写 `http://<ip>:81/stream` 的 MJPG 流地址，经后端代理接入。
+- **本机摄像头**：`getUserMedia` 读取 USB 摄像头，画面仅在本浏览器内分析，不上传存储。
 
 **检测链路**：前端 canvas 按 1 帧/秒抓帧 → `POST /api/v1/safety/detect-frame` → YOLO 检测（不落库、不建工单、不跑 LLM）→ 返回 hazard 列表与归一化检测框 → 浏览器叠加画框。
 
-**软报警规则**：连续 2 帧出现高危（高风险/重大风险）或未戴安全帽、未戴口罩、未穿反光背心违规即触发告警横幅、提示音与**语音播报**（浏览器 Web Speech 中文 TTS 念出隐患名，如"未佩戴安全帽"）；连续 3 帧正常自动解除。语音播报跟随「声音」开关，静音时仅保留视觉告警；浏览器不支持语音合成时自动跳过、不报错。抓帧被浏览器安全策略阻止（MJPG 跨域未授权）时自动降级为仅显示画面不检测。
+**软报警规则**：连续 2 帧出现高危（高风险/重大风险）或未戴安全帽、未戴口罩、未穿反光背心违规即触发告警横幅、提示音与**语音播报**（浏览器 Web Speech 中文 TTS 念出隐患名，如"未佩戴安全帽"）；连续 3 帧正常自动解除。语音播报跟随「声音」开关，静音时仅保留视觉告警；浏览器不支持语音合成时自动跳过、不报错。抓帧被浏览器安全策略阻止时自动降级为仅显示画面不检测。
 
 **语音播报（浏览器 TTS）**：除实时监测外，**安全分析**页单张图片分析结果含高危/重大隐患时，也会用中文语音念出隐患名（页面头部有"语音播报"开关，默认开启）。完全离线可用——Win11/Edge 自带中文语音，不依赖任何后端服务或新增依赖。质量巡检页不播报。
 
@@ -341,14 +340,8 @@ VISION_LLM_PROVIDER=off          # claude_cli | doubao | zhipu | off
 | 接口 | 说明 |
 | --- | --- |
 | `POST /api/v1/safety/detect-frame` | 实时单帧 YOLO 检测。模型缺失时返回 `available=false` 而非 500；临时帧写入 `backend/storage/tmp` 后立即清理 |
-| `GET /api/v1/safety/mjpeg-proxy` | 透传 ESP32-CAM 的 MJPG 流并补 `Access-Control-Allow-Origin: *`（否则 canvas 抓帧会被浏览器阻止）。仅放行本机/内网地址（SSRF 防护）；token 走 query 参数，仅限本地演示场景 |
 
-**ESP32 硬报警（可选，默认禁用）**：检测到 high/critical 隐患时，后端经 `BackgroundTasks` 后台 `POST` 到 `ALERT_WEBHOOK_URL`（fire-and-forget、失败静默、绝不阻塞检测主链路）。需在 ESP32 固件侧实现 HTTP 服务接收该 POST 并驱动 GPIO 蜂鸣器；固件不在本仓库。
-
-```env
-# backend/.env —— 未配置则硬报警禁用，不影响实时监测主链路
-ALERT_WEBHOOK_URL=http://192.168.1.50/api/alert
-```
+**ESP32 现场环境传感器**：普通 ESP32 负责 DHT11 温湿度、LCD、蜂鸣器和状态灯等现场数据采集，并通过硬件遥测接口上报；「工友关怀」页会与和风天气数据并存展示。仓库和文档不记录任何第三方服务密钥。
 
 **语音广播到网络音响/PA（可选，默认禁用）**：检测到 high/critical 隐患时，后端经 `BackgroundTasks` 后台 `POST` 到 `BROADCAST_WEBHOOK_URL`，payload 同时携带**中文文字**（`message`，如"警告！检测到未佩戴安全帽，请立即整改。"）与**可选 mp3 音频**（`audio_base64`）。降级优先：未配置 TTS 或合成失败时只推文字（设备自带 TTS 时即可发声），绝不阻塞检测主链路。设备侧接收 HTTP 服务的固件/API 不在本仓库。
 

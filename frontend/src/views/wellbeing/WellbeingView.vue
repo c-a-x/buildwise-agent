@@ -3,6 +3,7 @@
 
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
+import { hardwareApi } from '@/api/hardware'
 import { getApiError } from '@/api/http'
 import { wellbeingApi } from '@/api/wellbeing'
 import { ensureAlertAudio, startAlert, stopAlert } from '@/lib/alarmSound'
@@ -13,6 +14,7 @@ import { useAppStore } from '@/stores/app'
 import { useProjectStore } from '@/stores/project'
 import { formatDateTime } from '@/utils/date'
 import type { CareCity, WellbeingAnalysisResult, WellbeingRecordSummary, WellbeingSchedule, WellbeingTips, WeatherSnapshot } from '@/types/wellbeing'
+import type { HardwareTelemetry } from '@/types/hardware'
 
 const CONDITIONS = ['晴', '多云', '阴', '小雨', '中雨', '雷阵雨']
 
@@ -35,9 +37,23 @@ const weatherLoading = ref(true)
 const cities = ref<CareCity[]>([])
 const selectedCity = ref('')
 const schedule = ref<WellbeingSchedule | null>(null)
+const hardware = ref<HardwareTelemetry | null>(null)
+const hardwareLoading = ref(true)
+const hardwareError = ref('')
+const noiseDb = ref<number | null>(null)
+const noiseActive = ref(false)
+const noiseError = ref('')
+let hardwareTimer: number | undefined
+let noiseTimer: number | undefined
+let audioContext: AudioContext | null = null
+let noiseStream: MediaStream | null = null
+let noiseAnalyser: AnalyserNode | null = null
+let noiseData: Uint8Array<ArrayBuffer> | null = null
 
 const modePill = computed(() => (result.value?.is_simulated ? '兜底规则' : '标准规则'))
 const heatBadge = computed(() => result.value?.heat_level ?? 'none')
+const noiseStatus = computed(() => noiseSafety(noiseDb.value))
+const analysisSourceLabel = computed(() => (hardware.value?.is_fresh ? '分析采用现场传感器' : weather.value?.available ? '分析采用和风天气' : '等待环境数据'))
 
 // 本地蜂鸣：橙色/红色高温（≥37℃）在浏览器本机响铃，无需任何硬件或后端配置
 const BUZZER_LEVELS = ['orange', 'red'] as const
@@ -91,13 +107,19 @@ async function loadWeather(city?: string): Promise<void> {
   weatherLoading.value = true
   try {
     weather.value = await wellbeingApi.weather(city || selectedCity.value || undefined)
-    if (weather.value.available) {
-      temperatureC.value = String(weather.value.temperature_c ?? '')
-      humidityPct.value = String(weather.value.humidity_pct ?? '50')
-      condition.value = weather.value.condition ?? '晴'
-    }
+    if (weather.value.available && !hardware.value?.is_fresh) fillAnalysisFromWeather()
   } catch (cause) {
-    weather.value = { available: false, reason: getApiError(cause), provider: null, temperature_c: null, humidity_pct: null, condition: null, city: null, observed_at: null, is_simulated: true }
+    weather.value = {
+      available: false,
+      reason: '外部天气接口暂时不可用，现场传感器数据仍可正常显示。',
+      provider: 'qweather',
+      temperature_c: null,
+      humidity_pct: null,
+      condition: null,
+      city: null,
+      observed_at: null,
+      is_simulated: true,
+    }
   } finally {
     weatherLoading.value = false
   }
@@ -190,15 +212,142 @@ function fmt(value: number | null | undefined, digits = 1): string {
   return value.toFixed(digits)
 }
 
+async function loadHardware(): Promise<void> {
+  try {
+    hardware.value = await hardwareApi.latest()
+    hardwareError.value = ''
+    if (hardware.value?.is_fresh) {
+      temperatureC.value = String(hardware.value.temperature_c)
+      humidityPct.value = String(hardware.value.humidity_pct)
+      condition.value = '现场传感器'
+    }
+  } catch {
+    hardwareError.value = '现场传感器接口暂时不可用，请确认后端已启动。'
+    if (!temperatureC.value) fillAnalysisFromWeather()
+  } finally {
+    hardwareLoading.value = false
+  }
+}
+
+function fillAnalysisFromWeather(): void {
+  if (!weather.value?.available) return
+  temperatureC.value = String(weather.value.temperature_c ?? '')
+  humidityPct.value = String(weather.value.humidity_pct ?? '50')
+  condition.value = weather.value.condition ?? '晴'
+}
+
+function noiseLevelLabel(value: number | null): string {
+  if (value === null) return '未开启'
+  if (value < 55) return '安静'
+  if (value < 70) return '正常'
+  if (value < 85) return '偏吵'
+  return '高噪音'
+}
+
+function noiseSafety(value: number | null): { level: 'idle' | 'normal' | 'notice' | 'protect' | 'stop'; title: string; action: string; ppe: string; note: string } {
+  if (value === null) {
+    return {
+      level: 'idle',
+      title: '等待噪音检测',
+      action: '开启麦克风后，系统会按现场噪音实时给出作业建议。',
+      ppe: '准备防噪耳塞或耳罩',
+      note: '电脑麦克风读数用于现场辅助判断，正式验收建议配合专业声级计校准。',
+    }
+  }
+  if (value < 70) {
+    return {
+      level: 'normal',
+      title: '噪音处于可接受范围',
+      action: '可正常作业，持续观察设备启动、切割、打磨等瞬时噪音。',
+      ppe: '普通安全帽与常规劳保用品',
+      note: '建议保持通道沟通清晰，避免长时间靠近强噪声设备。',
+    }
+  }
+  if (value < 85) {
+    return {
+      level: 'notice',
+      title: '噪音偏高，缩短连续暴露',
+      action: '安排轮换作业，减少人员在声源旁停留时间。',
+      ppe: '建议佩戴防噪耳塞',
+      note: '对混凝土切割、冲击钻、空压机附近人员进行重点提醒。',
+    }
+  }
+  if (value < 90) {
+    return {
+      level: 'protect',
+      title: '达到听力防护阈值',
+      action: '进入该区域必须佩戴防噪耳塞或耳罩，并限制连续作业时长。',
+      ppe: '必须佩戴 SNR 25dB 以上耳塞/耳罩',
+      note: '现场安全员应确认警示牌、隔离带和人员轮换安排。',
+    }
+  }
+  return {
+    level: 'stop',
+    title: '高噪声，建议暂停作业',
+    action: '立即停止非必要高噪声作业，人员撤离到低噪声区域，复核设备和声源。',
+    ppe: '复工前必须佩戴耳罩，可叠加耳塞',
+    note: '复测低于 85dB 且防护到位后，再由安全员确认是否恢复作业。',
+  }
+}
+
+function refreshNoise(): void {
+  if (!noiseAnalyser || !noiseData) return
+  noiseAnalyser.getByteTimeDomainData(noiseData)
+  let sum = 0
+  for (const item of noiseData) {
+    const centered = (item - 128) / 128
+    sum += centered * centered
+  }
+  const rms = Math.sqrt(sum / noiseData.length)
+  noiseDb.value = Math.round(Math.max(30, Math.min(100, 20 * Math.log10(rms || 0.00001) + 94)))
+}
+
+async function startNoiseMonitor(): Promise<void> {
+  noiseError.value = ''
+  try {
+    noiseStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    audioContext = new AudioContext()
+    const source = audioContext.createMediaStreamSource(noiseStream)
+    noiseAnalyser = audioContext.createAnalyser()
+    noiseAnalyser.fftSize = 1024
+    noiseData = new Uint8Array(new ArrayBuffer(noiseAnalyser.fftSize))
+    source.connect(noiseAnalyser)
+    noiseActive.value = true
+    refreshNoise()
+    noiseTimer = window.setInterval(refreshNoise, 200)
+  } catch (cause) {
+    noiseError.value = cause instanceof Error ? cause.message : '麦克风权限未开启'
+    noiseActive.value = false
+  }
+}
+
+function stopNoiseMonitor(): void {
+  if (noiseTimer) window.clearInterval(noiseTimer)
+  noiseTimer = undefined
+  noiseStream?.getTracks().forEach((track) => track.stop())
+  noiseStream = null
+  void audioContext?.close()
+  audioContext = null
+  noiseAnalyser = null
+  noiseData = null
+  noiseActive.value = false
+}
+
 onMounted(async () => {
   if (!projects.projects.length) await projects.loadProjects()
   await loadWeather() // 先用后端默认城市取一次实时天气，weather.city 用于初始化城市下拉
-  await Promise.all([loadCities(), loadRecords(), loadStatus()])
+  await Promise.all([loadCities(), loadRecords(), loadStatus(), loadHardware()])
+  hardwareTimer = window.setInterval(loadHardware, 500)
   try {
     tips.value = await wellbeingApi.tips()
   } catch {
     tips.value = null
   }
+})
+
+onUnmounted(() => {
+  if (hardwareTimer) window.clearInterval(hardwareTimer)
+  stopNoiseMonitor()
 })
 </script>
 
@@ -241,12 +390,52 @@ onMounted(async () => {
             <template v-if="weather?.available">
               <p class="weather-live">{{ weather.condition }} · {{ fmt(weather.temperature_c) }}℃ · 湿度 {{ fmt(weather.humidity_pct, 0) }}% <span class="mono">（{{ weather.provider }}）</span></p>
               <p v-if="weather.observed_at" class="helper-text">观测时间 {{ formatDateTime(weather.observed_at) }}</p>
-              <p class="helper-text">已用实时天气预填下表，可按现场情况修改后分析。</p>
+              <p class="helper-text">和风 API 提供城市实时天气；现场传感器数据在下方独立显示，两者并存不互相替代。</p>
             </template>
             <template v-else>
               <p class="weather-fallback">{{ weather?.reason || '正在获取实时天气…' }}</p>
               <p class="helper-text">未配置天气 API 时请在下方手动填写温度与湿度。</p>
             </template>
+          </div>
+
+          <div class="live-site-card">
+            <div class="weather-card-head">
+              <AppIcon name="mic" :size="16" />
+              <strong>现场实时环境</strong>
+              <span class="mono">{{ hardwareLoading ? '读取中…' : hardware?.is_fresh ? 'ESP32 在线' : '等待数据' }}</span>
+            </div>
+            <div class="live-metrics">
+              <div class="live-metric">
+                <small>温度</small>
+                <strong>{{ hardware ? `${fmt(hardware.temperature_c)}℃` : '—' }}</strong>
+              </div>
+              <div class="live-metric">
+                <small>湿度</small>
+                <strong>{{ hardware ? `${fmt(hardware.humidity_pct, 0)}%` : '—' }}</strong>
+              </div>
+              <div class="live-metric">
+                <small>噪音</small>
+                <strong>{{ noiseDb === null ? '—' : `${noiseDb} dB` }}</strong>
+              </div>
+            </div>
+            <div class="noise-actions">
+              <button v-if="!noiseActive" type="button" class="secondary-button" @click="startNoiseMonitor"><AppIcon name="mic" :size="15" />开启噪音检测</button>
+              <button v-else type="button" class="secondary-button" @click="stopNoiseMonitor"><AppIcon name="close" :size="15" />停止噪音检测</button>
+              <span class="mono">{{ noiseLevelLabel(noiseDb) }}</span>
+            </div>
+            <div class="noise-safety-card" :class="`noise-${noiseStatus.level}`">
+              <div>
+                <small>噪音作业建议</small>
+                <strong>{{ noiseStatus.title }}</strong>
+              </div>
+              <p>{{ noiseStatus.action }}</p>
+              <ul class="noise-rule-list">
+                <li><AppIcon name="check" :size="14" /><span>{{ noiseStatus.ppe }}</span></li>
+                <li><AppIcon name="info" :size="14" /><span>{{ noiseStatus.note }}</span></li>
+              </ul>
+            </div>
+            <p v-if="hardwareError" class="helper-text">{{ hardwareError }}</p>
+            <p v-if="noiseError" class="helper-text">{{ noiseError }}</p>
           </div>
 
           <div class="two-fields">
@@ -281,6 +470,7 @@ onMounted(async () => {
             <AppIcon name="spark" :size="16" />{{ analyzing ? '分析中…' : '开始关怀分析' }}
           </button>
           <p class="helper-text">高温分级与作业限制依据《防暑降温措施管理办法》（安监总安健〔2012〕89号）；红色高温（≥40℃）自动联动现场语音广播（已配置时），橙色/红色高温在本机自动响蜂鸣提醒。</p>
+          <p class="helper-text">{{ analysisSourceLabel }}。高温分级与作业限制依据《防暑降温措施管理办法》（安监总安健〔2012〕89号）；红色高温（≥40℃）自动联动现场语音广播。</p>
         </div>
       </section>
 
@@ -315,6 +505,18 @@ onMounted(async () => {
           <section class="card">
             <div class="card-head"><div><p class="section-kicker">RESTRICTION</p><h3>作业限制</h3></div><span class="mono">{{ result.condition }} · {{ fmt(result.temperature_c) }}℃</span></div>
             <p class="restriction-text">{{ result.restriction || '未触发高温作业限制。' }}</p>
+          </section>
+
+          <section class="card">
+            <div class="card-head"><div><p class="section-kicker">NOISE CONTROL</p><h3>噪音防护与停工建议</h3></div><span class="mono">{{ noiseDb === null ? '未检测' : `${noiseDb} dB` }}</span></div>
+            <div class="noise-result" :class="`noise-${noiseStatus.level}`">
+              <strong>{{ noiseStatus.title }}</strong>
+              <p>{{ noiseStatus.action }}</p>
+            </div>
+            <ul class="clean-list noise-clean-list">
+              <li><AppIcon name="check" :size="15" /><span>{{ noiseStatus.ppe }}</span></li>
+              <li><AppIcon name="info" :size="15" /><span>70dB 以上加强提醒，85dB 以上必须听力防护，90dB 以上建议暂停高噪声作业并复测。</span></li>
+            </ul>
           </section>
 
           <section class="card">
@@ -394,6 +596,31 @@ onMounted(async () => {
 .weather-live { margin: 0; font-size: 12px; color: var(--text); }
 .weather-fallback { margin: 0; font-size: 12px; color: var(--danger); }
 .weather-card .helper-text { margin: 0; color: var(--muted); font-size: 10px; }
+.live-site-card { border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; display: grid; gap: 10px; background: var(--surface); }
+.live-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.live-metric { min-height: 58px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 9px; background: var(--surface-soft); display: grid; align-content: center; gap: 3px; }
+.live-metric small { font-size: 10px; color: var(--muted); }
+.live-metric strong { font-size: 18px; line-height: 1.1; color: var(--text); }
+.noise-actions { display: flex; align-items: center; gap: 8px; }
+.noise-actions .secondary-button { min-height: 32px; padding: 0 10px; }
+.live-site-card .helper-text { margin: 0; color: var(--muted); font-size: 10px; }
+.noise-safety-card { display: grid; gap: 7px; border: 1px solid var(--line); border-radius: 8px; padding: 10px 11px; background: var(--surface-soft); }
+.noise-safety-card small { display: block; margin-bottom: 3px; color: var(--muted); font-size: 10px; }
+.noise-safety-card strong { color: var(--text); font-size: 12px; }
+.noise-safety-card p { margin: 0; color: var(--text-soft); font-size: 11px; line-height: 1.55; }
+.noise-rule-list { display: grid; gap: 5px; padding: 0; margin: 0; list-style: none; }
+.noise-rule-list li { display: flex; align-items: flex-start; gap: 6px; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.noise-rule-list .app-icon { flex: none; margin-top: 1px; color: currentColor; }
+.noise-result { display: grid; gap: 6px; border: 1px solid var(--line); border-radius: 8px; padding: 12px 13px; background: var(--surface-soft); }
+.noise-result strong { font-size: 13px; color: var(--text); }
+.noise-result p { margin: 0; color: var(--text-soft); font-size: 12px; line-height: 1.6; }
+.noise-clean-list { margin-top: 12px; }
+.noise-idle { border-color: var(--line); background: var(--surface-soft); }
+.noise-normal { border-color: var(--success); background: var(--success-bg); }
+.noise-notice { border-color: var(--warning); background: var(--warning-bg); }
+.noise-protect { border-color: var(--danger); background: var(--danger-bg); }
+.noise-stop { border-color: var(--critical); background: var(--critical-bg); }
+.noise-stop strong, .noise-stop p, .noise-stop li { color: var(--critical); }
 .result-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .heat-banner { display: flex; align-items: flex-start; gap: 15px; padding: 18px 20px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-soft); }
 .heat-banner.heat-none { border-color: var(--success); background: var(--success-bg); }

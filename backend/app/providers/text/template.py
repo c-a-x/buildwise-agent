@@ -4,6 +4,17 @@ from __future__ import annotations
 class TemplateTextProvider:
     name = "template"
 
+    def generate_chat_reply(self, payload: dict[str, object]) -> str:
+        question = str(payload.get("question", "")).strip() or "这个问题"
+        context = payload.get("context", [])
+        context_lines = [str(item).strip() for item in context if str(item).strip()] if isinstance(context, list) else []
+        if context_lines:
+            reply = f"师傅，先按这条来：{context_lines[0]}。"
+            if len(context_lines) > 1:
+                reply += f"补充参考：{'；'.join(context_lines[1:3])}。"
+            return reply + "如果现场条件和条款有冲突，先停一下，找安全员确认后再继续。"
+        return f"师傅，先把问题说清楚：{question}。如果还不确定，先别硬干，找安全员确认后再继续。"
+
     def generate_worker_message(self, payload: dict[str, object]) -> str:
         risk_level = str(payload.get("risk_level", "medium"))
         hazard_name = str(payload.get("hazard_name", "现场隐患"))

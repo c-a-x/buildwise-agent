@@ -43,8 +43,8 @@ export function useRealtimeDetection() {
         canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.8),
       )
     } catch {
-      // 跨域 MJPG 流未授权时 canvas 被 taint，toBlob 抛 SecurityError
-      error.value = '视频帧抓取被浏览器安全策略阻止（CORS）；已切换为仅显示不检测。'
+      // Browser camera security can still taint frames in some environments.
+      error.value = '视频帧抓取被浏览器安全策略阻止；已切换为仅显示不检测。'
       return Promise.resolve(null)
     }
   }

@@ -50,7 +50,6 @@ const visionLabel = computed(() => {
   const parts = vision.replace(/^quality_hybrid:?/, '').split('+').filter(Boolean).map(shortenVisionPart)
   return `模型在线 · ${parts.length ? parts.join(' + ') : vision}`
 })
-const isOfflineSimulated = computed(() => !result.value || result.value.is_simulated)
 
 // 缺陷按来源拆分：YOLO/mock 归「识别到的缺陷」，LLM 归「深度分析」专属卡片
 const yoloDefects = computed(() => (result.value?.defects ?? []).filter((defect) => defect.source !== 'llm'))
@@ -64,20 +63,6 @@ const visionLlmProviderLabel = computed(() => {
   if (provider === 'zhipu') return '智谱 AI'
   if (provider === 'claude_cli') return 'Claude CLI'
   return provider || 'LLM'
-})
-const llmNoteTitle = computed(() => {
-  if (!result.value) return '当前为离线模拟模式'
-  if (isOfflineSimulated.value) return '当前为离线模拟模式'
-  return visionLlmEnabled.value ? '当前使用真实检测模型 + LLM 深度分析' : '当前使用真实检测模型'
-})
-const llmNoteText = computed(() => {
-  if (!result.value || isOfflineSimulated.value) {
-    return 'QualityAgent 使用本地规则；RagAgent 使用内置质量规范条目；不会调用付费模型。'
-  }
-  if (visionLlmEnabled.value) {
-    return 'QualityAgent 使用 YOLO 识别墙体缺陷；Vision LLM 提供 D1-D5 深层缺陷分析与修复建议。'
-  }
-  return 'QualityAgent 使用 YOLO 目标检测识别裂缝/渗漏/剥落/锈蚀/鼓包；RagAgent 使用内置规范条目；LLM 未配置时自动降级，不调用付费模型。'
 })
 
 function shortenVisionPart(part: string): string {
@@ -181,9 +166,9 @@ function confidence(value: number): string { return `${Math.round(value * 100)}%
 </script>
 
 <template>
-  <div><AppPageHeader eyebrow="QUALITY INSPECTION" title="质量巡检分析" description="上传工程部位图片，让五个离线 Agent 协同完成缺陷识别、规范检索、整改工单和复检提醒。"><template #actions><span class="status-pill dark"><span class="status-dot online" />{{ visionLabel }}</span></template></AppPageHeader>
+  <div><AppPageHeader eyebrow="QUALITY INSPECTION" title="质量巡检分析" description="上传工程部位图片，AI 协同完成缺陷识别、规范检索与整改工单。"><template #actions><span class="status-pill dark"><span class="status-dot online" />{{ visionLabel }}</span></template></AppPageHeader>
     <div class="safety-layout">
-      <section class="card input-panel"><div class="card-head"><div><p class="section-kicker">01 · INPUT</p><h3>准备一次质量巡检</h3></div><span class="mono">120s timeout</span></div><div class="form-grid">
+      <section class="card input-panel"><div class="card-head"><div><p class="section-kicker">01 · INPUT</p><h3>准备一次质量巡检</h3></div></div><div class="form-grid">
         <div class="form-field"><label>当前项目</label><select :value="projects.currentProject?.id" @change="selectProject"><option v-for="project in projects.projects" :key="project.id" :value="project.id">{{ project.name }}</option></select></div>
         <div class="form-field"><label>巡检图片 <span>*</span></label><label class="upload-zone" :class="{ 'is-dragging': isDragging }" @dragover.prevent="handleDragOver" @dragleave.prevent="handleDragLeave" @drop.prevent="handleDrop"><input type="file" accept="image/jpeg,image/png,image/webp" @change="handleFile" /><img v-if="previewUrl" :src="previewUrl" alt="已选择的巡检图片预览" /><span v-else class="upload-icon"><AppIcon name="upload" :size="22" /></span><strong>{{ file ? '重新选择巡检图片' : '点击或拖拽上传巡检图片' }}</strong><small>JPEG / PNG / WEBP · 最大 10 MB</small><span v-if="file" class="file-name">{{ file.name }}</span></label><CameraCapture :disabled="quality.analyzing || quality.loadingTask" @captured="onCaptured" /><p v-if="historyMode" class="helper-text">正在查看历史任务 {{ historyTaskId }}，无需再次上传；选择新图片后可重新分析。</p></div>
         <div class="form-field"><label>示例图片 <span>点击即用</span></label><div class="sample-row"><button v-for="sample in samples" :key="sample.file" type="button" class="sample-card" @click="loadSample(sample.url, sample.file)"><img :src="sample.url" alt="示例图片" /><span class="sample-name">{{ sample.name }}</span><small class="sample-hint">{{ sample.hint }}</small></button></div><p class="helper-text">示例图仅用于快速演示 · 检测仍为五类缺陷开放识别：裂缝 / 渗漏 / 剥落 / 锈蚀 / 鼓包。</p></div>
@@ -191,7 +176,7 @@ function confidence(value: number): string { return `${Math.round(value * 100)}%
         <div class="form-field"><label for="description">现场说明 <span>可选</span></label><textarea id="description" v-model.trim="description" placeholder="补充结构部位、龄期或需要重点关注的信息" /></div>
         <div v-if="localError || quality.error" class="alert alert-error" role="alert">{{ localError || quality.error }}</div>
         <button v-if="!historyMode || file" class="primary-button analyze-button button-block" type="button" :disabled="quality.analyzing || quality.loadingTask" @click="analyze"><AppIcon :name="quality.analyzing ? 'refresh' : 'spark'" :size="16" />{{ quality.analyzing ? 'Agent 正在协同分析…' : historyMode ? '使用新图片重新分析' : '开始质量巡检' }}</button><div v-if="quality.analyzing" class="analysis-progress"><span /></div>
-      </div><div class="mode-note"><AppIcon name="info" :size="16" /><div><strong>{{ llmNoteTitle }}</strong><span>{{ llmNoteText }}</span></div></div></section>
+      </div></section>
       <div class="result-column">
         <AppState v-if="!result && !quality.analyzing" title="等待一次质量巡检" description="右侧结果会完整展示缺陷、规范依据、AI 工单草稿、整改提醒和执行轨迹。"><template #default><div class="scanner-illustration" aria-hidden="true"><span /><i /><b /></div></template></AppState>
         <AppState v-else-if="quality.analyzing" type="loading" title="五个 Agent 正在协同工作" description="正在识别缺陷、检索规范并生成可人工复核的草稿。" />

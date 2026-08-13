@@ -51,7 +51,6 @@ const visionLabel = computed(() => {
   const parts = vision.replace(/^safety_hybrid:?/, '').split('+').filter(Boolean).map(shortenVisionPart)
   return `模型在线 · ${parts.length ? parts.join(' + ') : vision}`
 })
-const isOfflineSimulated = computed(() => !result.value || result.value.is_simulated)
 const broadcastOn = ref(true) // 单张分析出高危时语音播报开关
 
 // 隐患按来源拆分：YOLO/mock 归「识别到的隐患」，LLM 归「深度分析」专属卡片
@@ -67,21 +66,6 @@ const visionLlmProviderLabel = computed(() => {
   if (provider === 'claude_cli') return 'Claude CLI'
   return provider || 'LLM'
 })
-const llmNoteTitle = computed(() => {
-  if (!result.value) return '当前为离线模拟模式'
-  if (isOfflineSimulated.value) return '当前为离线模拟模式'
-  return visionLlmEnabled.value ? '当前使用真实检测模型 + LLM 深度分析' : '当前使用真实检测模型'
-})
-const llmNoteText = computed(() => {
-  if (!result.value || isOfflineSimulated.value) {
-    return 'SafetyAgent 使用本地规则；RagAgent 使用内置规范条目；不会调用付费模型。'
-  }
-  if (visionLlmEnabled.value) {
-    return 'SafetyAgent 使用 YOLO 识别现场人员与隐患；Vision LLM 提供 H1-H10 深层分析与规范依据。'
-  }
-  return 'SafetyAgent 使用 YOLO 目标检测识别现场人员与隐患；RagAgent 使用内置规范条目；LLM 未配置时自动降级，不调用付费模型。'
-})
-
 function shortenVisionPart(part: string): string {
   if (part === 'yolo') return 'YOLO'
   if (part === 'doubao') return '豆包 LLM'
@@ -193,9 +177,9 @@ function confidence(value: number): string { return `${Math.round(value * 100)}%
 </script>
 
 <template>
-  <div><AppPageHeader eyebrow="SAFETY INTELLIGENCE" title="现场安全分析" description="上传施工现场图片，让五个离线 Agent 协同完成识别、检索、任务和日报预览。"><template #actions><span class="status-pill dark"><span class="status-dot online" />{{ visionLabel }}</span><button v-if="ttsSupported()" type="button" class="broadcast-toggle" :class="{ on: broadcastOn }" @click="broadcastOn = !broadcastOn"><AppIcon name="speaker" :size="14" />语音播报</button></template></AppPageHeader>
+  <div><AppPageHeader eyebrow="SAFETY INTELLIGENCE" title="现场安全分析" description="上传施工现场图片，AI 协同完成隐患识别、规范检索与整改工单。"><template #actions><span class="status-pill dark"><span class="status-dot online" />{{ visionLabel }}</span><button v-if="ttsSupported()" type="button" class="broadcast-toggle" :class="{ on: broadcastOn }" @click="broadcastOn = !broadcastOn"><AppIcon name="speaker" :size="14" />语音播报</button></template></AppPageHeader>
     <div class="safety-layout">
-      <section class="card input-panel"><div class="card-head"><div><p class="section-kicker">01 · INPUT</p><h3>准备一次现场分析</h3></div><span class="mono">120s timeout</span></div><div class="form-grid">
+      <section class="card input-panel"><div class="card-head"><div><p class="section-kicker">01 · INPUT</p><h3>准备一次现场分析</h3></div></div><div class="form-grid">
         <div class="form-field"><label>当前项目</label><select :value="projects.currentProject?.id" @change="selectProject"><option v-for="project in projects.projects" :key="project.id" :value="project.id">{{ project.name }}</option></select></div>
         <div class="form-field"><label>现场图片 <span>*</span></label><label class="upload-zone" :class="{ 'is-dragging': isDragging }" @dragover.prevent="handleDragOver" @dragleave.prevent="handleDragLeave" @drop.prevent="handleDrop"><input type="file" accept="image/jpeg,image/png,image/webp" @change="handleFile" /><img v-if="previewUrl" :src="previewUrl" alt="已选择的现场图片预览" /><span v-else class="upload-icon"><AppIcon name="upload" :size="22" /></span><strong>{{ file ? '重新选择现场图片' : '点击或拖拽上传现场图片' }}</strong><small>JPEG / PNG / WEBP · 最大 10 MB</small><span v-if="file" class="file-name">{{ file.name }}</span></label><CameraCapture :disabled="safety.analyzing || safety.loadingTask" @captured="onCaptured" /><p v-if="historyMode" class="helper-text">正在查看历史任务 {{ historyTaskId }}，无需再次上传；选择新图片后可重新分析。</p></div>
         <div class="form-field"><label>示例图片 <span>点击即用</span></label><div class="sample-row"><button v-for="sample in samples" :key="sample.file" type="button" class="sample-card" @click="loadSample(sample.url, sample.file)"><img :src="sample.url" alt="示例图片" /><span class="sample-name">{{ sample.name }}</span><small class="sample-hint">{{ sample.hint }}</small></button></div></div>
@@ -203,7 +187,7 @@ function confidence(value: number): string { return `${Math.round(value * 100)}%
         <div class="form-field"><label for="description">现场说明 <span>可选</span></label><textarea id="description" v-model.trim="description" placeholder="补充光线、作业环境或需要重点关注的信息" /></div>
         <div v-if="localError || safety.error" class="alert alert-error" role="alert">{{ localError || safety.error }}</div>
         <button v-if="!historyMode || file" class="primary-button analyze-button button-block" type="button" :disabled="safety.analyzing || safety.loadingTask" @click="analyze"><AppIcon :name="safety.analyzing ? 'refresh' : 'spark'" :size="16" />{{ safety.analyzing ? 'Agent 正在协同分析…' : historyMode ? '使用新图片重新分析' : '开始安全分析' }}</button><div v-if="safety.analyzing" class="analysis-progress"><span /></div>
-      </div><div class="mode-note"><AppIcon name="info" :size="16" /><div><strong>{{ llmNoteTitle }}</strong><span>{{ llmNoteText }}</span></div></div></section>
+      </div></section>
       <div class="result-column">
         <AppState v-if="!result && !safety.analyzing" title="等待一次现场分析" description="右侧结果会完整展示风险、规范依据、AI 工单草稿、工友提醒和执行轨迹。"><template #default><div class="scanner-illustration" aria-hidden="true"><span /><i /><b /></div></template></AppState>
         <AppState v-else-if="safety.analyzing" type="loading" title="五个 Agent 正在协同工作" description="正在识别现场、检索规范并生成可人工复核的草稿。" />

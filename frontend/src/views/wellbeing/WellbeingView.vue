@@ -353,7 +353,7 @@ onUnmounted(() => {
 
 <template>
   <div>
-    <AppPageHeader eyebrow="WORKER WELLBEING" title="工友关怀 · 幸福工地" description="输入天气/环境数据，CareAgent 按《防暑降温措施管理办法》计算高温等级与中暑风险，送上温馨、可执行的关怀提醒。">
+    <AppPageHeader eyebrow="WORKER WELLBEING" title="工友关怀 · 幸福工地" description="输入天气、环境与噪声数据，评估高温中暑风险，给出防暑与降噪提醒。">
       <template #actions>
         <span v-if="result" class="status-pill" :class="`heat-${heatBadge}`"><span class="status-dot" :class="heatBadge !== 'none' ? 'online' : ''" />{{ heatLabel(heatBadge) }}</span>
         <span v-if="result" class="status-pill dark"><span class="status-dot online" />{{ modePill }}</span>
@@ -423,17 +423,6 @@ onUnmounted(() => {
               <button v-else type="button" class="secondary-button" @click="stopNoiseMonitor"><AppIcon name="close" :size="15" />停止噪音检测</button>
               <span class="mono">{{ noiseLevelLabel(noiseDb) }}</span>
             </div>
-            <div class="noise-safety-card" :class="`noise-${noiseStatus.level}`">
-              <div>
-                <small>噪音作业建议</small>
-                <strong>{{ noiseStatus.title }}</strong>
-              </div>
-              <p>{{ noiseStatus.action }}</p>
-              <ul class="noise-rule-list">
-                <li><AppIcon name="check" :size="14" /><span>{{ noiseStatus.ppe }}</span></li>
-                <li><AppIcon name="info" :size="14" /><span>{{ noiseStatus.note }}</span></li>
-              </ul>
-            </div>
             <p v-if="hardwareError" class="helper-text">{{ hardwareError }}</p>
             <p v-if="noiseError" class="helper-text">{{ noiseError }}</p>
           </div>
@@ -469,8 +458,7 @@ onUnmounted(() => {
           <button type="button" class="primary-button button-block" :disabled="analyzing" @click="analyze">
             <AppIcon name="spark" :size="16" />{{ analyzing ? '分析中…' : '开始关怀分析' }}
           </button>
-          <p class="helper-text">高温分级与作业限制依据《防暑降温措施管理办法》（安监总安健〔2012〕89号）；红色高温（≥40℃）自动联动现场语音广播（已配置时），橙色/红色高温在本机自动响蜂鸣提醒。</p>
-          <p class="helper-text">{{ analysisSourceLabel }}。高温分级与作业限制依据《防暑降温措施管理办法》（安监总安健〔2012〕89号）；红色高温（≥40℃）自动联动现场语音广播。</p>
+          <p class="helper-text">{{ analysisSourceLabel }}。高温分级依据《防暑降温措施管理办法》（安监总安健〔2012〕89号）；红色高温自动联动现场语音广播与蜂鸣提醒。</p>
         </div>
       </section>
 
@@ -604,13 +592,6 @@ onUnmounted(() => {
 .noise-actions { display: flex; align-items: center; gap: 8px; }
 .noise-actions .secondary-button { min-height: 32px; padding: 0 10px; }
 .live-site-card .helper-text { margin: 0; color: var(--muted); font-size: 10px; }
-.noise-safety-card { display: grid; gap: 7px; border: 1px solid var(--line); border-radius: 8px; padding: 10px 11px; background: var(--surface-soft); }
-.noise-safety-card small { display: block; margin-bottom: 3px; color: var(--muted); font-size: 10px; }
-.noise-safety-card strong { color: var(--text); font-size: 12px; }
-.noise-safety-card p { margin: 0; color: var(--text-soft); font-size: 11px; line-height: 1.55; }
-.noise-rule-list { display: grid; gap: 5px; padding: 0; margin: 0; list-style: none; }
-.noise-rule-list li { display: flex; align-items: flex-start; gap: 6px; color: var(--muted); font-size: 10px; line-height: 1.45; }
-.noise-rule-list .app-icon { flex: none; margin-top: 1px; color: currentColor; }
 .noise-result { display: grid; gap: 6px; border: 1px solid var(--line); border-radius: 8px; padding: 12px 13px; background: var(--surface-soft); }
 .noise-result strong { font-size: 13px; color: var(--text); }
 .noise-result p { margin: 0; color: var(--text-soft); font-size: 12px; line-height: 1.6; }

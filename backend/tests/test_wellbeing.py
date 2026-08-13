@@ -318,13 +318,13 @@ def test_weather_provider_openweather_condition_map():
 def test_weather_provider_qweather_location_ids_and_attrs():
     from app.providers.weather.qweather import QWeatherProvider
 
-    provider = QWeatherProvider("https://api.qweather.com/v7", "key")
+    provider = QWeatherProvider("https://geo.qweather.com/v2", "https://api.qweather.com/v7", "key")
     assert provider.name == "qweather"
     assert provider.is_simulated is False
     # 未收录城市原样透传（可配经纬度或 LocationID），中文城市名映射到官方 LocationID
-    assert provider._location_id("北京") == "101010100"
-    assert provider._location_id("beijing") == "101010100"
-    assert provider._location_id("30.5,114.3") == "30.5,114.3"
+    assert provider._resolve_location("北京") == ("101010100", "北京")
+    assert provider._resolve_location("beijing") == ("101010100", "beijing")
+    assert provider._resolve_location("30.5,114.3") == ("30.5,114.3", "30.5,114.3")
 
 
 def test_weather_provider_qweather_fetch_parses_response(monkeypatch):
@@ -346,12 +346,12 @@ def test_weather_provider_qweather_fetch_parses_response(monkeypatch):
     calls: list[tuple[str, dict[str, object]]] = []
     import httpx
 
-    def _fake_get(url, params, timeout):
+    def _fake_get(url, params, headers=None, timeout=None):
         calls.append((url, params))
         return _FakeResponse()
 
     monkeypatch.setattr(httpx, "get", _fake_get)
-    snapshot = QWeatherProvider("https://api.qweather.com/v7", "k").fetch("beijing")
+    snapshot = QWeatherProvider("https://geo.qweather.com/v2", "https://api.qweather.com/v7", "k").fetch("beijing")
     assert snapshot.temperature_c == 33.0
     assert snapshot.humidity_pct == 71.0
     assert snapshot.condition == "多云"
@@ -377,8 +377,8 @@ def test_weather_provider_qweather_fetch_bad_update_time_falls_back(monkeypatch)
 
     import httpx
 
-    monkeypatch.setattr(httpx, "get", lambda url, params, timeout: _FakeResponse())
-    snapshot = QWeatherProvider("https://api.qweather.com/v7", "k").fetch("北京")
+    monkeypatch.setattr(httpx, "get", lambda url, params=None, headers=None, timeout=None: _FakeResponse())
+    snapshot = QWeatherProvider("https://geo.qweather.com/v2", "https://api.qweather.com/v7", "k").fetch("北京")
     assert isinstance(snapshot.observed_at, datetime)
 
 
@@ -395,9 +395,9 @@ def test_weather_provider_qweather_fetch_invalid_code(monkeypatch):
 
     import httpx
 
-    monkeypatch.setattr(httpx, "get", lambda url, params, timeout: _FakeResponse())
+    monkeypatch.setattr(httpx, "get", lambda url, params=None, headers=None, timeout=None: _FakeResponse())
     with pytest.raises(AppError) as exc_info:
-        QWeatherProvider("https://api.qweather.com/v7", "k").fetch("北京")
+        QWeatherProvider("https://geo.qweather.com/v2", "https://api.qweather.com/v7", "k").fetch("北京")
     assert exc_info.value.code == "WEATHER_INVALID_RESPONSE"
 
 

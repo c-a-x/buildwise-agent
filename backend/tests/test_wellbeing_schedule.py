@@ -38,8 +38,8 @@ def test_fetch_daily_forecast_parses(monkeypatch):
                 [{"fxDate": "2026-08-10", "tempMax": "33", "tempMin": "24", "textDay": "多云", "humidity": "74", "uvIndex": "9"}]
             )
 
-    monkeypatch.setattr(httpx, "get", lambda url, params, timeout: _FakeResponse())
-    forecast = QWeatherProvider("https://api.qweather.com/v7", "k").fetch_daily_forecast("beijing")
+    monkeypatch.setattr(httpx, "get", lambda url, params=None, headers=None, timeout=None: _FakeResponse())
+    forecast = QWeatherProvider("https://geo.qweather.com/v2", "https://api.qweather.com/v7", "k").fetch_daily_forecast("beijing")
     assert forecast.fx_date == "2026-08-10"
     assert forecast.temp_max_c == 33.0
     assert forecast.temp_min_c == 24.0
@@ -58,9 +58,9 @@ def test_fetch_daily_forecast_invalid_code(monkeypatch):
         def json(self) -> dict[str, object]:
             return {"code": "401", "error": {"title": "apikey 无效"}}
 
-    monkeypatch.setattr(httpx, "get", lambda url, params, timeout: _FakeResponse())
+    monkeypatch.setattr(httpx, "get", lambda url, params=None, headers=None, timeout=None: _FakeResponse())
     with pytest.raises(AppError) as exc_info:
-        QWeatherProvider("https://api.qweather.com/v7", "k").fetch_daily_forecast("北京")
+        QWeatherProvider("https://geo.qweather.com/v2", "https://api.qweather.com/v7", "k").fetch_daily_forecast("北京")
     assert exc_info.value.code == "WEATHER_INVALID_RESPONSE"
 
 
@@ -74,9 +74,9 @@ def test_fetch_daily_forecast_empty_daily(monkeypatch):
         def json(self) -> dict[str, object]:
             return _forecast_response([])
 
-    monkeypatch.setattr(httpx, "get", lambda url, params, timeout: _FakeResponse())
+    monkeypatch.setattr(httpx, "get", lambda url, params=None, headers=None, timeout=None: _FakeResponse())
     with pytest.raises(AppError):
-        QWeatherProvider("https://api.qweather.com/v7", "k").fetch_daily_forecast("北京")
+        QWeatherProvider("https://geo.qweather.com/v2", "https://api.qweather.com/v7", "k").fetch_daily_forecast("北京")
 
 
 def test_fetch_daily_forecast_missing_fields(monkeypatch):
@@ -89,9 +89,9 @@ def test_fetch_daily_forecast_missing_fields(monkeypatch):
         def json(self) -> dict[str, object]:
             return _forecast_response([{"fxDate": "2026-08-10", "textDay": "晴"}])
 
-    monkeypatch.setattr(httpx, "get", lambda url, params, timeout: _FakeResponse())
+    monkeypatch.setattr(httpx, "get", lambda url, params=None, headers=None, timeout=None: _FakeResponse())
     with pytest.raises(AppError) as exc_info:
-        QWeatherProvider("https://api.qweather.com/v7", "k").fetch_daily_forecast("北京")
+        QWeatherProvider("https://geo.qweather.com/v2", "https://api.qweather.com/v7", "k").fetch_daily_forecast("北京")
     assert exc_info.value.code == "WEATHER_INVALID_RESPONSE"
 
 
@@ -152,7 +152,7 @@ def _scheduled_settings(**overrides):
 def _install_forecast_provider(monkeypatch, temp_max_c: float):
     import app.services.care_scheduler as scheduler_module
 
-    provider = QWeatherProvider("https://x/v7", "k")
+    provider = QWeatherProvider("https://geo.x/v2", "https://x/v7", "k")
     monkeypatch.setattr(
         provider,
         "fetch_daily_forecast",

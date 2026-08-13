@@ -10,7 +10,7 @@ from app.core.exceptions import AppError, NotFoundError
 from app.models import Project, WellbeingRecord
 from app.providers.factory import build_weather_provider
 from app.providers.wellbeing import WellbeingRules, wellbeing_rules
-from app.providers.weather.qweather import CITY_NAMES
+from app.providers.weather.qweather import CITY_NAMES, _CITY_LOCATION_IDS
 from app.schemas.wellbeing import (
     CareCity,
     FacilityRead,
@@ -173,12 +173,18 @@ class WellbeingService:
         )
 
     def cities(self) -> list[CareCity]:
-        """城市下拉候选：qweather 内置中文城市 + 配置的 WEATHER_CITY（去重）。"""
-        names = list(CITY_NAMES)
+        """城市下拉候选：内置中文城市；配置的 WEATHER_CITY 用对应中文名展示（值保留配置别名），避免中英文重复。"""
         configured = self.settings.weather_city.strip()
-        if configured and configured not in names:
-            names.append(configured)
-        return [CareCity(id=name, name=name) for name in names]
+        configured_id = _CITY_LOCATION_IDS.get(configured.lower()) if configured else None
+        items: list[CareCity] = []
+        for zh in CITY_NAMES:
+            location_id = _CITY_LOCATION_IDS.get(zh)
+            if configured_id and location_id == configured_id:
+                # 配置城市：值用配置别名（beijing），展示中文名（北京），保证默认城市能匹配 weather.city
+                items.append(CareCity(id=configured, name=zh))
+            else:
+                items.append(CareCity(id=zh, name=zh))
+        return items
 
     def tips(self) -> WellbeingTips:
         rules = wellbeing_rules()

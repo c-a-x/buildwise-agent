@@ -4,8 +4,6 @@ BuildWise 是面向施工现场的安全运营工作台，覆盖**安全分析�
 
 默认配置不需要外部 API Key，数据库使用真实 SQLite 文件，适合离线演示和自动化验收。前端不会直接连接数据库，而是通过 FastAPI → SQLAlchemy → SQLite 读取和写入数据。规范检索默认使用本地关键词 Provider；Chroma 模式使用真实持久化向量 collection，但仍使用离线可重复 embedding，不依赖外部文本大模型。
 
-官方 `scripts/e2e_demo.py` 会有意写入演示 SQLite 库，依赖 seed 数据并支持重复运行，不提供隔离数据库。
-
 ## 环境要求
 
 - Python 3.11 或更高版本；
@@ -20,7 +18,7 @@ BuildWise 是面向施工现场的安全运营工作台，覆盖**安全分析�
 首次安装依赖并初始化数据库：
 
 ```powershell
-cd E:\cc项目\buildwise-agent
+cd D:\PythonProject\筑智共生
 py -3.11 -m venv backend\venv
 backend\venv\Scripts\python.exe -m pip install -e ".\backend[dev]"
 cd backend
@@ -33,19 +31,19 @@ npm ci
 分别启动后端和前端：
 
 ```powershell
-cd E:\cc项目\buildwise-agent\backend
+cd D:\PythonProject\筑智共生\backend
 ..\backend\venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
 ```
 
 ```powershell
-cd E:\cc项目\buildwise-agent\frontend
+cd D:\PythonProject\筑智共生\frontend
 npm run dev -- --host 0.0.0.0
 ```
 
 也可以一键运行（会先执行迁移和种子，后端日志写入 `backend/storage/logs/dev-backend.log`）：
 
 ```powershell
-cd E:\cc项目\buildwise-agent
+cd D:\PythonProject\筑智共生
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\dev.ps1
 ```
 
@@ -86,7 +84,7 @@ cd frontend && npm run dev -- --host 0.0.0.0
 检查当前真实数据库是否可读、种子数据是否存在以及前后端 API 是否能读到项目：
 
 ```powershell
-cd E:\cc项目\buildwise-agent
+cd D:\PythonProject\筑智共生
 python scripts\verify_sqlite_live.py
 ```
 
@@ -186,7 +184,7 @@ VISION_LLM_PROVIDER=off          # claude_cli | doubao | zhipu | off
 
 **降级规则**：YOLO 模型缺失、加载失败或未安装 `backend[vision]` 依赖时，自动降级为模拟结果并显式标记 `is_simulated=true`，不会中断请求；`VISION_LLM_PROVIDER=off` 或 LLM 调用失败时仅保留 YOLO 检测（`is_simulated=false`，仍为真实检测）。
 
-**模型放置**：三个权重（`yolov8n.pt` / `yolov8n-10cls.pt` / `yolov8n-5cls-mbdd.pt`）默认已随仓库提交。若要替换为自行训练/下载的模型，直接覆盖对应路径即可——例如从训练产物复制 `results_yolov8n_100e/kaggle/working/runs/detect/train/weights/best.pt` 到 `backend/storage/models/yolov8n-10cls.pt`，或用 ultralytics 在同一 10 类数据集上自行训练并替换。
+**模型放置**：若要替换为自行训练/下载的模型，直接覆盖对应路径即可——例如从训练产物复制 `results_yolov8n_100e/kaggle/working/runs/detect/train/weights/best.pt` 到 `backend/storage/models/yolov8n-10cls.pt`，或用 ultralytics 在同一 10 类数据集上自行训练并替换。
 
 ## 质量巡检（quality 模块）
 
@@ -378,7 +376,7 @@ SPEECH_PROVIDER=openai_compatible
 本地导入命令（先执行 Alembic 迁移）：
 
 ```powershell
-cd E:\cc项目\buildwise-agent
+cd D:\PythonProject\筑智共生
 backend\venv\Scripts\python.exe scripts\ingest_knowledge.py --input data_demo\standards\safety_standards.json
 backend\venv\Scripts\python.exe scripts\ingest_knowledge.py --input path\to\authorized.pdf --source "已授权来源" --title "文档标题" --category "施工安全" --version "2026" --effective-date 2026-01-01
 ```
@@ -422,14 +420,14 @@ $env:RETRIEVAL_PROVIDER = "local_keyword"
 也可执行自动化验收：
 
 ```powershell
-cd E:\cc项目\buildwise-agent
+cd D:\PythonProject\筑智共生
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\test_runbooks.ps1
 ```
 
 推荐使用一条命令执行完整验收（后端测试、迁移检查、runbook、真实 HTTP E2E、Provider 预检、前端测试/类型检查/构建和 `git diff --check`）：
 
 ```powershell
-cd E:\cc项目\buildwise-agent
+cd D:\PythonProject\筑智共生
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_all.ps1
 ```
 
@@ -471,19 +469,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_all.ps1
 
 种子数据（`backend/app/db/seed.py`）除默认演示项目「滨江智造中心一期」（PRJ-001，按 `created_at` 倒序仍为默认当前项目）外，另加入 6 个公开代表项目作为真实演示项目：**北京中信大厦（中国尊）**（528 米）、**深圳平安金融中心**（599.1 米）、**广州周大福金融中心（广州东塔）**（530 米）等中国建筑项目，以及**上海中心大厦**（632 米，上海建工）、**国家体育场（鸟巢）**（北京城建）、**港珠澳大桥**（55 公里）等非中建项目——名称与承建信息取自公开项目资料（来源记入项目 `description`），`created_at` 回填到竣工年份；四个演示角色对 7 个项目均可见、可切换做碳排核算与对标。
 
-## 验证命令
+## 分项验证命令
 
-完整验收优先执行：
-
-```powershell
-cd E:\cc项目\buildwise-agent
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_all.ps1
-```
-
-需要单独定位阶段时，再执行下面的分项命令：
+主 Demo 一节已推荐用 `scripts\verify_all.ps1` 一条命令跑完整验收；需要单独定位阶段时，执行下面的分项命令：
 
 ```powershell
-cd E:\cc项目\buildwise-agent\backend
+cd D:\PythonProject\筑智共生\backend
 ..\backend\venv\Scripts\python.exe -m pytest -q
 ..\backend\venv\Scripts\python.exe -m alembic upgrade head
 
@@ -529,5 +520,5 @@ npm run build
 
 - 为 `QualityAgent` 接入真实质量巡检数据源；
 - 为 `GreenAgent` 接入经核证的真实排放因子库与更细颗粒度碳排数据源；
-- 为 `CareAgent` 接入真实天气数据源与定时关怀提醒，增加工友反馈问卷与幸福指数统计；
+- 为 `CareAgent` 增加工友反馈问卷与幸福指数统计；
 - 面向生产环境迁移 PostgreSQL、对象存储、HTTPS、集中日志和速率限制。

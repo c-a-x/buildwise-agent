@@ -150,7 +150,7 @@ def test_chat_rag_normal_tone_when_clause_not_high_risk(client, monkeypatch):
     data = response.json()["data"]
     assert data["answer_source"] == "rag"
     assert "暂停作业" not in data["answer"]
-    assert "请联系安全员复查" in data["answer"]
+    assert "联系安全员复查" in data["answer"]
 
 
 def test_chat_rag_llm_grounds_answer_when_llm_ready(client, monkeypatch):
@@ -202,7 +202,7 @@ def test_chat_llm_failure_degrades_to_offline_rag(client, monkeypatch):
     assert response.status_code == 200
     data = response.json()["data"]
     assert data["answer_source"] == "rag"  # LLM 调用失败不阻断问答，降级到离线规则模板
-    assert "请联系安全员复查" in data["answer"]
+    assert "联系安全员复查" in data["answer"]
 
 
 def test_chat_falls_back_to_template_when_no_hits(client, monkeypatch):

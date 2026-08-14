@@ -47,7 +47,7 @@ async function submit(): Promise<void> {
   <section class="auth-panel">
     <p class="eyebrow">WELCOME BACK</p>
     <h1>登录工作空间</h1>
-    <p class="intro">进入项目现场数据与 AI 协同工作台，继续处理今天的安全任务。</p>
+    <p class="intro">进入项目现场运营工作台，继续处理今天的安全任务。</p>
     <div v-if="errorMessage" class="alert alert-error" role="alert">{{ errorMessage }}</div>
     <form class="auth-form" @submit.prevent="submit">
       <div class="form-field"><label for="username">用户名</label><input id="username" v-model.trim="form.username" autocomplete="username" placeholder="输入演示账号或用户名" required /></div>

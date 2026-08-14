@@ -36,10 +36,10 @@ onMounted(async () => {
     const core = (Object.values(runtime.capabilities ?? {}) as ProviderCapability[]).filter((capability) => capability && CORE_KEYS.has(capability.key))
     const connected = core.filter((capability) => capability.status !== 'not_configured' && capability.status !== 'unavailable')
     if (connected.length === 0) {
-      aiStatus.value = { label: '离线模拟 Provider', detail: '无需外部 API Key', online: false }
+      aiStatus.value = { label: '系统服务正常', detail: '离线能力可用 · 无需外部 Key', online: false }
     } else {
       aiStatus.value = {
-        label: connected.length >= 3 ? 'AI 服务在线' : 'AI 服务已接入',
+        label: connected.length >= 3 ? '系统服务在线' : '系统服务已接入',
         detail: connected.map((capability) => capability.name).join(' · '),
         online: true,
       }
@@ -53,8 +53,8 @@ onMounted(async () => {
 <template>
   <aside class="sidebar" :class="{ collapsed: app.sidebarCollapsed }">
     <div class="brand-block">
-      <div class="brand-mark" aria-hidden="true"><i /><i /><i /></div>
-      <div class="brand-copy"><strong>筑智共生</strong><small>BUILDWISE AI AGENT</small></div>
+      <img class="sidebar-logo-horizontal" src="/brand/buildwise-logo-transparent.png" alt="BuildWise 筑智共生 AI Agent" width="198" height="68" />
+      <div class="brand-logo-mark" aria-hidden="true"><img src="/brand/buildwise-mark.png" alt="" width="40" height="40" /></div>
       <button class="sidebar-close" type="button" aria-label="关闭导航" @click="app.closeMobileNav"><AppIcon name="close" :size="18" /></button>
     </div>
     <nav class="sidebar-nav" aria-label="主导航">

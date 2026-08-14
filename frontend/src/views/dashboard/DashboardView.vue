@@ -69,7 +69,7 @@ watch(() => projects.currentProjectId, load)
 </script>
 
 <template>
-  <div>
+  <div class="dashboard-page">
     <AppPageHeader eyebrow="PROJECT CONTROL CENTER" title="项目工作台" :description="projects.currentProject ? `${projects.currentProject.name} · ${projects.currentProject.address}` : '正在载入项目数据'">
       <template #actions>
         <RouterLink v-if="canUseSafety" class="primary-button" to="/safety/analyze"><AppIcon name="plus" :size="16" />开始安全分析</RouterLink>

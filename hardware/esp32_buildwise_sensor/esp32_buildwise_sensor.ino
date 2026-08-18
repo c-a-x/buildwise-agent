@@ -4,13 +4,10 @@
 #include <LiquidCrystal_I2C.h>
 #include <DHT.h>
 
-// ===== WiFi and BuildWise backend =====
-const char* WIFI_SSID = "CMCC-4FCC";
-const char* WIFI_PASSWORD = "sbct2522";
+// Copy wifi_config.example.h to wifi_config.h before flashing.
+// wifi_config.h is intentionally ignored by Git because it contains local WiFi credentials.
+#include "wifi_config.h"
 
-// Change this if your computer's WLAN IPv4 address changes.
-// Do not use localhost here: localhost means the ESP32 itself.
-const char* SERVER_URL = "http://192.168.1.11:8010/api/v1/hardware/telemetry";
 const char* DEVICE_ID = "esp32-site-01";
 
 // ===== Pins =====

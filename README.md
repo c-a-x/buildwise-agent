@@ -339,7 +339,7 @@ VISION_LLM_PROVIDER=off          # claude_cli | doubao | zhipu | off
 | --- | --- |
 | `POST /api/v1/safety/detect-frame` | 实时单帧 YOLO 检测。模型缺失时返回 `available=false` 而非 500；临时帧写入 `backend/storage/tmp` 后立即清理 |
 
-**ESP32 现场环境传感器**：普通 ESP32 负责 DHT11 温湿度、LCD、蜂鸣器和状态灯等现场数据采集，并通过硬件遥测接口上报；「工友关怀」页会与和风天气数据并存展示。仓库和文档不记录任何第三方服务密钥。
+**ESP32 现场环境传感器**：普通 ESP32 负责 DHT11 温湿度、LCD、蜂鸣器和状态灯等现场数据采集，并通过硬件遥测接口上报；「工友关怀」页会与和风天气数据并存展示。烧录前复制 `hardware/esp32_buildwise_sensor/wifi_config.example.h` 为 `wifi_config.h`，填写本地 WiFi 名称、密码和电脑局域网 IP；`wifi_config.h` 已被 Git 忽略，不上传真实网络信息。仓库和文档不记录任何第三方服务密钥。
 
 **语音广播到网络音响/PA（可选，默认禁用）**：检测到 high/critical 隐患时，后端经 `BackgroundTasks` 后台 `POST` 到 `BROADCAST_WEBHOOK_URL`，payload 同时携带**中文文字**（`message`，如"警告！检测到未佩戴安全帽，请立即整改。"）与**可选 mp3 音频**（`audio_base64`）。降级优先：未配置 TTS 或合成失败时只推文字（设备自带 TTS 时即可发声），绝不阻塞检测主链路。设备侧接收 HTTP 服务的固件/API 不在本仓库。
 
